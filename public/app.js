@@ -10,6 +10,9 @@
   let activeCategory = 'all';
   let searchQuery = '';
   let currentViewMemory = null;
+  let currentPin = null;
+  let inactivityTimer = null;
+  let isVaultPinSet = false;
 
   // --- DOM Elements ---
   const grid = document.getElementById('memory-grid');
@@ -45,6 +48,17 @@
 
   // Toast
   const toastContainer = document.getElementById('toast-container');
+
+  // PIN Modals
+  const pinSetupOverlay = document.getElementById('pin-setup-overlay');
+  const pinSetupForm = document.getElementById('pin-setup-form');
+  const newPinInput = document.getElementById('new-pin-input');
+  const pinSetupClose = document.getElementById('pin-setup-close');
+  
+  const pinEntryOverlay = document.getElementById('pin-entry-overlay');
+  const pinEntryForm = document.getElementById('pin-entry-form');
+  const enterPinInput = document.getElementById('enter-pin-input');
+  const pinEntryClose = document.getElementById('pin-entry-close');
 
   // --- Particles ---
   function initParticles() {
@@ -91,6 +105,61 @@
     animate();
   }
 
+  // --- Security & Activity ---
+  function getHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      ...(currentPin ? { 'X-Vault-PIN': currentPin } : {})
+    };
+  }
+
+  function lockVault() {
+    if (currentPin) {
+      currentPin = null;
+      showToast('Vault locked instantly', 'info');
+      closeFormModal();
+      closeViewModal();
+      pinEntryOverlay.classList.remove('active');
+      pinSetupOverlay.classList.remove('active');
+      fetchMemories();
+    }
+  }
+
+  function resetInactivityTimer() {
+    if (!currentPin) return; // Only timer if unlocked
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      currentPin = null;
+      showToast('Vault auto-locked due to inactivity', 'info');
+      closeFormModal();
+      closeViewModal();
+      fetchMemories();
+    }, 60000); // 60 seconds
+  }
+
+  let throttleTimer = false;
+  function handleActivity() {
+    if (throttleTimer) return;
+    throttleTimer = true;
+    setTimeout(() => { throttleTimer = false; }, 1000);
+    resetInactivityTimer();
+  }
+
+  // Activity listeners to reset timer
+  ['mousemove', 'keydown', 'scroll', 'click'].forEach(evt => {
+    window.addEventListener(evt, handleActivity);
+  });
+
+  async function checkPinStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      isVaultPinSet = data.isPinSet;
+    } catch (e) {
+      console.error('Failed to check pin status', e);
+    }
+  }
+
   // --- API Helpers ---
   async function fetchMemories() {
     try {
@@ -100,7 +169,7 @@
       } else if (activeCategory !== 'all') {
         url += `?category=${activeCategory}`;
       }
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: getHeaders() });
       memories = await res.json();
       render();
     } catch (err) {
@@ -112,14 +181,17 @@
     try {
       const res = await fetch('/api/memories', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify(data)
       });
-      if (!res.ok) throw new Error('Create failed');
-      showToast('Memory locked away! 🔐', 'success');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Create failed');
+      }
+      showToast('Memory saved ✨', 'success');
       fetchMemories();
     } catch (err) {
-      showToast('Failed to create memory', 'error');
+      showToast(err.message, 'error');
     }
   }
 
@@ -127,29 +199,50 @@
     try {
       const res = await fetch(`/api/memories/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify(data)
       });
-      if (!res.ok) throw new Error('Update failed');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Update failed');
+      }
       return await res.json();
     } catch (err) {
-      showToast('Failed to update memory', 'error');
+      showToast(err.message, 'error');
       return null;
     }
   }
 
   async function deleteMemory(id) {
     try {
-      const res = await fetch(`/api/memories/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Delete failed');
+      const res = await fetch(`/api/memories/${id}`, { 
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Delete failed');
+      }
       showToast('Memory erased 🗑️', 'info');
       fetchMemories();
     } catch (err) {
-      showToast('Failed to delete memory', 'error');
+      showToast(err.message, 'error');
     }
   }
 
   async function toggleLock(id, currentLocked) {
+    if (!currentLocked && !isVaultPinSet) {
+      pinSetupOverlay.classList.add('active');
+      newPinInput.focus();
+      return;
+    }
+    
+    if (currentLocked && !currentPin) {
+       pinEntryOverlay.classList.add('active');
+       enterPinInput.focus();
+       return;
+    }
+
     const result = await updateMemory(id, { locked: !currentLocked });
     if (result) {
       showToast(result.locked ? 'Memory locked 🔒' : 'Memory unlocked 🔓', 'success');
@@ -214,7 +307,14 @@
       card.addEventListener('click', () => {
         const id = card.dataset.id;
         const mem = memories.find(m => m.id === id);
-        if (mem) openViewModal(mem);
+        if (mem) {
+           if (mem.locked && !currentPin) {
+             pinEntryOverlay.classList.add('active');
+             enterPinInput.focus();
+           } else {
+             openViewModal(mem);
+           }
+        }
       });
     });
   }
@@ -349,6 +449,57 @@
     };
   }
 
+  // --- PIN Modals ---
+  if (pinSetupClose) pinSetupClose.addEventListener('click', () => pinSetupOverlay.classList.remove('active'));
+  if (pinEntryClose) pinEntryClose.addEventListener('click', () => pinEntryOverlay.classList.remove('active'));
+
+  if (pinSetupForm) {
+    pinSetupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pin = newPinInput.value;
+      try {
+        const res = await fetch('/api/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin })
+        });
+        if (!res.ok) throw new Error('Setup failed');
+        isVaultPinSet = true;
+        currentPin = pin;
+        showToast('Master PIN set successfully', 'success');
+        pinSetupOverlay.classList.remove('active');
+        newPinInput.value = '';
+        resetInactivityTimer();
+        fetchMemories();
+      } catch (e) {
+        showToast('Failed to set PIN', 'error');
+      }
+    });
+  }
+
+  if (pinEntryForm) {
+    pinEntryForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pin = enterPinInput.value;
+      try {
+        const res = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin })
+        });
+        if (!res.ok) throw new Error('Invalid PIN');
+        currentPin = pin;
+        showToast('Vault Unlocked 🔓', 'success');
+        pinEntryOverlay.classList.remove('active');
+        enterPinInput.value = '';
+        resetInactivityTimer();
+        fetchMemories();
+      } catch (e) {
+        showToast('Invalid PIN', 'error');
+      }
+    });
+  }
+
   // --- Event Listeners ---
 
   // FAB
@@ -450,8 +601,14 @@
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      closeFormModal();
-      closeViewModal();
+      if (currentPin) {
+        lockVault(); // Panic mode
+      } else {
+        closeFormModal();
+        closeViewModal();
+        if (pinSetupOverlay) pinSetupOverlay.classList.remove('active');
+        if (pinEntryOverlay) pinEntryOverlay.classList.remove('active');
+      }
     }
     // Ctrl/Cmd + K to focus search
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -485,7 +642,7 @@
       appWrapper.classList.remove('entering');
 
       // Now init the app
-      initParticles();
+      checkPinStatus();
       fetchMemories();
     }, 700);
   }

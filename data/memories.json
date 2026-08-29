@@ -6,7 +6,7 @@
     "category": "personal",
     "locked": false,
     "createdAt": "2026-08-29T00:00:00.000Z",
-    "updatedAt": "2026-08-29T00:00:00.000Z"
+    "updatedAt": "2026-08-29T11:10:22.389Z"
   },
   {
     "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
@@ -15,7 +15,7 @@
     "category": "ideas",
     "locked": false,
     "createdAt": "2026-08-29T00:00:00.000Z",
-    "updatedAt": "2026-08-29T06:13:57.242Z"
+    "updatedAt": "2026-08-29T11:09:49.307Z"
   },
   {
     "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
@@ -24,7 +24,7 @@
     "category": "important",
     "locked": false,
     "createdAt": "2026-08-29T00:00:00.000Z",
-    "updatedAt": "2026-08-29T06:12:50.937Z"
+    "updatedAt": "2026-08-29T11:09:57.979Z"
   },
   {
     "id": "7b1b4d58-1ec7-40a4-99fd-0d3d55b5e506",
@@ -33,6 +33,6 @@
     "category": "personal",
     "locked": false,
     "createdAt": "2026-08-29T08:11:22.582Z",
-    "updatedAt": "2026-08-29T08:13:28.977Z"
+    "updatedAt": "2026-08-29T11:10:18.217Z"
   }
 ]
