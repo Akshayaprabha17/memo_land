@@ -1,0 +1,23 @@
+{
+  "name": "memory-lock",
+  "version": "1.0.0",
+  "description": "Memory Lock — A personal vault for storing and organizing memories",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "memory",
+    "vault",
+    "notes",
+    "storage"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "sharp": "^0.35.4",
+    "uuid": "^9.0.0"
+  }
+}

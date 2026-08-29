@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Memory Lock — Your personal vault for storing and organizing memories, notes, and secrets securely." />
+  <title>Memory Lock — Your Personal Vault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Particle background -->
+  <canvas id="particles-canvas"></canvas>
+
+  <!-- ========== LANDING PAGE ========== -->
+  <section id="landing-page">
+    <!-- Landing Nav -->
+    <nav class="landing-nav" id="landing-nav">
+      <div class="landing-nav-logo">
+        <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>Memory Lock</span>
+      </div>
+      <button class="landing-nav-cta" id="nav-enter-btn">Enter Vault</button>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero" id="hero-section">
+      <div class="hero-glow"></div>
+      <div class="hero-content">
+        <!-- Animated Lock -->
+        <div class="hero-lock" id="hero-lock">
+          <div class="lock-ring">
+            <div class="lock-ring-inner"></div>
+          </div>
+          <img src="/lego_nobg.webp" alt="Memory Lock Mascot" class="hero-lock-img" />
+        </div>
+
+        <h1 class="hero-title">
+          Your Memories,<br/>
+          <span class="hero-title-accent">Safely Locked Away</span>
+        </h1>
+        <p class="hero-subtitle">
+          A personal vault for your thoughts, ideas, secrets, and everything worth remembering.
+          Organize, protect, and access your memories anytime.
+        </p>
+        <button class="hero-cta" id="hero-enter-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 5-5 5 5 0 0 1 5 5"></path>
+            <line x1="17" y1="7" x2="17" y2="4"></line>
+          </svg>
+          Enter Your Vault
+          <span class="cta-arrow">→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features-section" id="features-section">
+      <h2 class="features-heading">Everything you need to <span class="text-gradient">remember</span></h2>
+      <div class="features-grid">
+        <div class="feature-card" id="feature-organize">
+          <div class="feature-icon feature-icon-violet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <h3>Organize by Category</h3>
+          <p>Sort your memories into Personal, Work, Ideas, Secrets, and Important — find anything in seconds.</p>
+        </div>
+        <div class="feature-card" id="feature-lock">
+          <div class="feature-icon feature-icon-gold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h3>Lock & Protect</h3>
+          <p>Toggle privacy on any memory with a single click. Locked memories are blurred and hidden from view.</p>
+        </div>
+        <div class="feature-card" id="feature-search">
+          <div class="feature-icon feature-icon-sky">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <h3>Instant Search</h3>
+          <p>Find any memory instantly with real-time search. Your thoughts are always just a keystroke away.</p>
+        </div>
+        <div class="feature-card" id="feature-beautiful">
+          <div class="feature-icon feature-icon-rose">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </div>
+          <h3>Beautiful Interface</h3>
+          <p>A premium dark-theme design with glassmorphism, smooth animations, and a delightful experience.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+      <p>Built with <span class="heart">♥</span> — Memory Lock &copy; 2026</p>
+    </footer>
+  </section>
+
+  <!-- ========== APP DASHBOARD (hidden initially) ========== -->
+  <div id="app-wrapper" class="app-wrapper hidden">
+
+  <!-- Header -->
+  <header id="app-header">
+    <div class="header-left">
+      <div class="logo" id="logo">
+        <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <h1>Memory Lock</h1>
+      </div>
+      <p class="tagline">Your personal vault</p>
+    </div>
+    <div class="header-right">
+      <div class="search-wrapper" id="search-wrapper">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search your memories..." autocomplete="off" />
+        <button class="search-clear" id="search-clear" aria-label="Clear search">&times;</button>
+      </div>
+      <div class="memory-count" id="memory-count">
+        <span id="count-number">0</span> memories
+      </div>
+    </div>
+  </header>
+
+  <!-- Category Filters -->
+  <nav id="category-nav">
+    <div class="category-scroll">
+      <button class="cat-btn active" data-category="all" id="cat-all">
+        <span class="cat-icon">🌐</span> All
+      </button>
+      <button class="cat-btn" data-category="personal" id="cat-personal">
+        <span class="cat-icon">💜</span> Personal
+      </button>
+      <button class="cat-btn" data-category="work" id="cat-work">
+        <span class="cat-icon">💼</span> Work
+      </button>
+      <button class="cat-btn" data-category="ideas" id="cat-ideas">
+        <span class="cat-icon">💡</span> Ideas
+      </button>
+      <button class="cat-btn" data-category="secrets" id="cat-secrets">
+        <span class="cat-icon">🤫</span> Secrets
+      </button>
+      <button class="cat-btn" data-category="important" id="cat-important">
+        <span class="cat-icon">⭐</span> Important
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="main-content">
+    <!-- Empty State -->
+    <div class="empty-state" id="empty-state" style="display: none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+      <h2>No memories yet</h2>
+      <p>Your vault is empty. Click the <strong>+</strong> button to store your first memory.</p>
+    </div>
+
+    <!-- Memory Grid -->
+    <div class="memory-grid" id="memory-grid"></div>
+  </main>
+
+  <!-- Floating Add Button -->
+  <button class="fab" id="fab-add" aria-label="Add new memory">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">New Memory</h2>
+        <button class="modal-close" id="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      <form id="memory-form">
+        <input type="hidden" id="memory-id" />
+        <div class="form-group">
+          <label for="memory-title-input">Title</label>
+          <input type="text" id="memory-title-input" placeholder="Give your memory a name..." required maxlength="100" />
+        </div>
+        <div class="form-group">
+          <label for="memory-content-input">Content</label>
+          <textarea id="memory-content-input" placeholder="Write your memory here..." required rows="6" maxlength="2000"></textarea>
+          <span class="char-count" id="char-count">0 / 2000</span>
+        </div>
+        <div class="form-group">
+          <label for="memory-category-input">Category</label>
+          <div class="select-wrapper">
+            <select id="memory-category-input">
+              <option value="personal">💜 Personal</option>
+              <option value="work">💼 Work</option>
+              <option value="ideas">💡 Ideas</option>
+              <option value="secrets">🤫 Secrets</option>
+              <option value="important">⭐ Important</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Save Memory
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Modal (for locked memories) -->
+  <div class="modal-overlay" id="view-modal-overlay">
+    <div class="modal view-modal" id="view-modal">
+      <div class="modal-header">
+        <h2 id="view-modal-title">Memory</h2>
+        <button class="modal-close" id="view-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="view-modal-body">
+        <div class="view-category" id="view-category"></div>
+        <div class="view-content" id="view-content"></div>
+        <div class="view-meta" id="view-meta"></div>
+      </div>
+      <div class="view-modal-actions">
+        <button class="btn btn-secondary btn-icon" id="view-edit-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Edit
+        </button>
+        <button class="btn btn-danger btn-icon" id="view-delete-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+  </div>
+  <!-- END app-wrapper -->
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "title": "Welcome to Memory Lock",
+    "content": "This is your personal vault. Store your thoughts, ideas, secrets, and important notes here. Each memory can be locked for extra privacy or organized by category. Click the lock icon to toggle privacy mode!",
+    "category": "personal",
+    "locked": false,
+    "createdAt": "2026-08-29T00:00:00.000Z",
+    "updatedAt": "2026-08-29T00:00:00.000Z"
+  },
+  {
+    "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "title": "Project Ideas for Q4",
+    "content": "1. Build a real-time collaboration tool\n2. Create an AI-powered journal\n3. Design a habit tracker with streaks\n4. Develop a recipe sharing platform",
+    "category": "ideas",
+    "locked": false,
+    "createdAt": "2026-08-29T00:00:00.000Z",
+    "updatedAt": "2026-08-29T06:13:57.242Z"
+  },
+  {
+    "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+    "title": "Important Passwords Reminder",
+    "content": "Remember to update all passwords this month. Use the password manager and enable 2FA on all accounts.",
+    "category": "important",
+    "locked": false,
+    "createdAt": "2026-08-29T00:00:00.000Z",
+    "updatedAt": "2026-08-29T06:12:50.937Z"
+  },
+  {
+    "id": "7b1b4d58-1ec7-40a4-99fd-0d3d55b5e506",
+    "title": "Movie remainder",
+    "content": "the movie called mr and mrs.Smith genre: romcom action",
+    "category": "personal",
+    "locked": false,
+    "createdAt": "2026-08-29T08:11:22.582Z",
+    "updatedAt": "2026-08-29T08:13:28.977Z"
+  }
+]
