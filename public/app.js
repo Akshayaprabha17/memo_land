@@ -1,31 +1,52 @@
 /* ============================================
    MEMORY LOCK — Client Application Logic
+   v3: Pagination, Sort, Tags (many-to-many)
    ============================================ */
 
 (function () {
   'use strict';
 
   // --- State ---
-  let memories = [];
+  let allMemories = [];       // accumulated across pages
+  let page = 1;
+  let hasMore = false;
+  let totalCount = 0;
+  let isLoadingMore = false;
   let activeCategory = 'all';
   let searchQuery = '';
+  let sortBy = 'newest';
+  let filterTag = null;       // active tag filter (null = none)
+  let formTags = [];          // tags being edited in the form
+
   let currentViewMemory = null;
-  let currentPin = null;
   let actionTargetMemoryId = null;
   let isPermanentUnlock = false;
 
+  const PAGE_LIMIT = 12;
+
   // --- DOM Elements ---
   const grid = document.getElementById('memory-grid');
+  const skeletonGrid = document.getElementById('skeleton-grid');
   const emptyState = document.getElementById('empty-state');
+  const emptySearchState = document.getElementById('empty-search-state');
+  const emptySearchMsg = document.getElementById('empty-search-msg');
+  const emptySearchClear = document.getElementById('empty-search-clear');
   const searchInput = document.getElementById('search-input');
   const searchClear = document.getElementById('search-clear');
+  const searchKbd = document.getElementById('search-kbd');
   const countNumber = document.getElementById('count-number');
   const fabAdd = document.getElementById('fab-add');
   const catButtons = document.querySelectorAll('.cat-btn');
+  const sortSelect = document.getElementById('sort-select');
+  const resultsInfo = document.getElementById('results-info');
+  const tagFilterBar = document.getElementById('tag-filter-bar');
+  const tagFilterChips = document.getElementById('tag-filter-chips');
+  const tagClearBtn = document.getElementById('tag-clear-btn');
+  const loadMoreSpinner = document.getElementById('load-more-spinner');
+  const scrollSentinel = document.getElementById('scroll-sentinel');
 
   // Form Modal
   const modalOverlay = document.getElementById('modal-overlay');
-  const modal = document.getElementById('modal');
   const modalTitle = document.getElementById('modal-title');
   const memoryForm = document.getElementById('memory-form');
   const memoryIdInput = document.getElementById('memory-id');
@@ -35,26 +56,26 @@
   const charCount = document.getElementById('char-count');
   const btnCancel = document.getElementById('btn-cancel');
   const modalClose = document.getElementById('modal-close');
+  const formTagPills = document.getElementById('form-tag-pills');
+  const tagTextInput = document.getElementById('tag-text-input');
 
   // View Modal
   const viewOverlay = document.getElementById('view-modal-overlay');
   const viewModalTitle = document.getElementById('view-modal-title');
   const viewCategory = document.getElementById('view-category');
+  const viewTagsEl = document.getElementById('view-tags');
   const viewContent = document.getElementById('view-content');
   const viewMeta = document.getElementById('view-meta');
   const viewModalClose = document.getElementById('view-modal-close');
   const viewEditBtn = document.getElementById('view-edit-btn');
   const viewDeleteBtn = document.getElementById('view-delete-btn');
 
-  // Toast
+  // Toast + PIN
   const toastContainer = document.getElementById('toast-container');
-
-  // PIN Modals
   const pinSetupOverlay = document.getElementById('pin-setup-overlay');
   const pinSetupForm = document.getElementById('pin-setup-form');
   const newPinInput = document.getElementById('new-pin-input');
   const pinSetupClose = document.getElementById('pin-setup-close');
-
   const pinEntryOverlay = document.getElementById('pin-entry-overlay');
   const pinEntryForm = document.getElementById('pin-entry-form');
   const enterPinInput = document.getElementById('enter-pin-input');
@@ -66,64 +87,143 @@
     const ctx = canvas.getContext('2d');
     let particles = [];
     const count = 50;
-
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     resize();
     window.addEventListener('resize', resize);
-
     for (let i = 0; i < count; i++) {
       particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        r: Math.random() * 2 + 0.5,
-        alpha: Math.random() * 0.3 + 0.05,
-        color: ['124,58,237', '167,139,250', '245,158,11', '14,165,233'][Math.floor(Math.random() * 4)]
+        x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+        r: Math.random() * 2 + 0.5, alpha: Math.random() * 0.3 + 0.05,
+        color: ['124,58,237','167,139,250','245,158,11','14,165,233'][Math.floor(Math.random()*4)]
       });
     }
-
     function animate() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`;
-        ctx.fill();
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`; ctx.fill();
       });
       requestAnimationFrame(animate);
     }
     animate();
   }
 
-  // --- Security Removed (Global) ---
+  // --- Skeleton helpers ---
+  function showSkeleton() {
+    if (skeletonGrid) skeletonGrid.style.display = 'grid';
+    grid.style.display = 'none';
+    emptyState.style.display = 'none';
+    if (emptySearchState) emptySearchState.style.display = 'none';
+    if (loadMoreSpinner) loadMoreSpinner.style.display = 'none';
+  }
 
-  // --- API Helpers ---
+  function hideSkeleton() {
+    if (skeletonGrid) skeletonGrid.style.display = 'none';
+    grid.style.display = '';
+  }
+
+  // --- Build fetch URL ---
+  function buildUrl(pg) {
+    const base = searchQuery ? '/api/memories/search' : '/api/memories';
+    const params = new URLSearchParams({ page: pg, limit: PAGE_LIMIT, sort: sortBy });
+    if (searchQuery) params.set('q', searchQuery);
+    else if (activeCategory !== 'all') params.set('category', activeCategory);
+    if (filterTag) params.set('tag', filterTag);
+    return `${base}?${params}`;
+  }
+
+  // --- Fetch page 1 (reset) ---
   async function fetchMemories() {
+    allMemories = [];
+    page = 1;
+    hasMore = false;
+    totalCount = 0;
+    showSkeleton();
+
     try {
-      let url = '/api/memories';
-      if (searchQuery) {
-        url = `/api/memories/search?q=${encodeURIComponent(searchQuery)}`;
-      } else if (activeCategory !== 'all') {
-        url += `?category=${activeCategory}`;
-      }
-      const res = await fetch(url);
-      memories = await res.json();
+      const res = await fetch(buildUrl(1));
+      const result = await res.json();
+      allMemories = result.data || [];
+      hasMore = result.hasMore || false;
+      totalCount = result.total || 0;
+      page = 1;
+      hideSkeleton();
       render();
+      updateResultsInfo();
+      fetchTags();
     } catch (err) {
+      hideSkeleton();
       showToast('Failed to load memories', 'error');
     }
   }
 
+  // --- Load next page (append) ---
+  async function loadMore() {
+    if (isLoadingMore || !hasMore) return;
+    isLoadingMore = true;
+    if (loadMoreSpinner) loadMoreSpinner.style.display = 'flex';
+
+    try {
+      const nextPage = page + 1;
+      const res = await fetch(buildUrl(nextPage));
+      const result = await res.json();
+      allMemories = [...allMemories, ...(result.data || [])];
+      hasMore = result.hasMore || false;
+      page = nextPage;
+      isLoadingMore = false;
+      if (loadMoreSpinner) loadMoreSpinner.style.display = 'none';
+      render(true);  // append-only render
+      updateResultsInfo();
+    } catch (err) {
+      isLoadingMore = false;
+      if (loadMoreSpinner) loadMoreSpinner.style.display = 'none';
+    }
+  }
+
+  // --- Results info ---
+  function updateResultsInfo() {
+    if (!resultsInfo) return;
+    if (totalCount === 0) { resultsInfo.textContent = ''; return; }
+    const shown = allMemories.length;
+    resultsInfo.textContent = shown < totalCount
+      ? `Showing ${shown} of ${totalCount} memories`
+      : `${totalCount} ${totalCount === 1 ? 'memory' : 'memories'}`;
+  }
+
+  // --- Tags API ---
+  async function fetchTags() {
+    try {
+      const res = await fetch('/api/tags');
+      const tags = await res.json();
+      renderTagFilterBar(tags);
+    } catch (e) { /* silent */ }
+  }
+
+  function renderTagFilterBar(tags) {
+    if (!tagFilterBar || !tagFilterChips) return;
+    if (!tags.length) { tagFilterBar.style.display = 'none'; return; }
+    tagFilterBar.style.display = 'flex';
+    tagClearBtn.style.display = filterTag ? '' : 'none';
+
+    tagFilterChips.innerHTML = tags.map(t => `
+      <button class="tag-chip${filterTag === t.name ? ' active' : ''}" data-tag="${escapeHtml(t.name)}">
+        #${escapeHtml(t.name)} <span class="tag-count">${t.count}</span>
+      </button>
+    `).join('');
+
+    tagFilterChips.querySelectorAll('.tag-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        filterTag = filterTag === chip.dataset.tag ? null : chip.dataset.tag;
+        fetchMemories();
+      });
+    });
+  }
+
+  // --- CRUD ---
   async function createMemory(data) {
     try {
       const res = await fetch('/api/memories', {
@@ -131,15 +231,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Create failed');
-      }
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Create failed'); }
       showToast('Memory saved ✨', 'success');
       fetchMemories();
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    } catch (err) { showToast(err.message, 'error'); }
   }
 
   async function updateMemory(id, data) {
@@ -149,29 +244,39 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Update failed');
-      }
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Update failed'); }
       return await res.json();
-    } catch (err) {
-      showToast(err.message, 'error');
-      return null;
-    }
+    } catch (err) { showToast(err.message, 'error'); return null; }
   }
 
   async function deleteMemory(id) {
     try {
       const res = await fetch(`/api/memories/${id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Delete failed');
-      }
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Delete failed'); }
       showToast('Memory erased 🗑️', 'info');
       fetchMemories();
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function togglePin(id) {
+    try {
+      const res = await fetch(`/api/memories/${id}/pin`, { method: 'PATCH' });
+      if (!res.ok) throw new Error('Pin failed');
+      const updated = await res.json();
+      showToast(updated.pinned ? 'Memory pinned 📌' : 'Unpinned', 'info');
+      fetchMemories();
+    } catch (err) { showToast('Could not pin memory', 'error'); }
+  }
+
+  async function saveReorder(orderedMemories) {
+    const order = orderedMemories.map((m, i) => ({ id: m.id, sortOrder: orderedMemories.length - i }));
+    try {
+      await fetch('/api/memories/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order })
+      });
+    } catch (e) { /* silent */ }
   }
 
   function handleLockClick(id, currentLocked) {
@@ -187,73 +292,222 @@
   }
 
   // --- Rendering ---
-  function render() {
-    countNumber.textContent = memories.length;
+  let dragSrcId = null;
 
-    if (memories.length === 0) {
-      grid.innerHTML = '';
-      emptyState.style.display = 'flex';
-      return;
+  function render(appendOnly = false) {
+    countNumber.textContent = totalCount;
+
+    const noMemories = allMemories.length === 0 && !searchQuery && !filterTag;
+    const noResults = allMemories.length === 0 && (!!searchQuery || !!filterTag);
+
+    emptyState.style.display = noMemories ? 'flex' : 'none';
+    if (emptySearchState) {
+      emptySearchState.style.display = noResults ? 'flex' : 'none';
+      if (noResults && emptySearchMsg) {
+        emptySearchMsg.textContent = searchQuery
+          ? `No memories match "${searchQuery}"`
+          : `No memories tagged #${filterTag}`;
+      }
     }
-    emptyState.style.display = 'none';
 
-    grid.innerHTML = memories.map((m, i) => {
-      const categoryEmojis = {
-        personal: '💜', work: '💼', ideas: '💡', secrets: '🤫', important: '⭐'
-      };
-      const emoji = categoryEmojis[m.category] || '📝';
-      const date = formatDate(m.createdAt);
-      const lockIconSVG = m.locked
-        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`
-        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 5-5 5 5 0 0 1 5 5"></path><line x1="17" y1="7" x2="17" y2="4"></line></svg>`;
+    if (noMemories || noResults) { grid.innerHTML = ''; return; }
 
-      const contentDisplay = m.locked
-        ? '••••• This memory is locked •••••'
-        : escapeHtml(m.content);
+    if (appendOnly) {
+      // Append only new cards (those beyond previous render)
+      const existingCount = grid.querySelectorAll('.memory-card').length;
+      const newMemories = allMemories.slice(existingCount);
+      const frag = document.createDocumentFragment();
+      newMemories.forEach((m, relIdx) => {
+        const div = document.createElement('div');
+        div.innerHTML = buildCardHTML(m, existingCount + relIdx).trim();
+        frag.appendChild(div.firstElementChild);
+      });
+      grid.appendChild(frag);
+    } else {
+      grid.innerHTML = allMemories.map((m, i) => buildCardHTML(m, i)).join('');
+    }
 
-      return `
-        <article class="memory-card" data-category="${m.category}" data-id="${m.id}" style="animation-delay: ${i * 0.06}s">
-          <div class="card-top">
-            <h3 class="card-title">${escapeHtml(m.title)}</h3>
-            <button class="card-lock-btn ${m.locked ? 'locked' : ''}" data-lock-id="${m.id}" data-locked="${m.locked}" title="${m.locked ? 'Unlock' : 'Lock'} memory" aria-label="${m.locked ? 'Unlock' : 'Lock'} this memory">
+    attachCardListeners();
+    attachDragHandlers();
+  }
+
+  function buildCardHTML(m, i) {
+    const categoryEmojis = { personal:'💜', work:'💼', ideas:'💡', secrets:'🤫', important:'⭐' };
+    const emoji = categoryEmojis[m.category] || '📝';
+    const date = formatDate(m.createdAt);
+    const lockIconSVG = m.locked
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 5-5 5 5 0 0 1 5 5"></path><line x1="17" y1="7" x2="17" y2="4"></line></svg>`;
+    const contentDisplay = m.locked ? '••••• This memory is locked •••••' : escapeHtml(m.content);
+    const pinBtnClass = `card-pin-btn${m.pinned ? ' pinned' : ''}`;
+    const pinTitle = m.pinned ? 'Unpin memory' : 'Pin to top';
+
+    const tags = m.tags || [];
+    const cardTagsHTML = tags.length
+      ? `<div class="card-tags">${tags.slice(0,3).map(t => `<span class="tag-chip-sm" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</span>`).join('')}${tags.length > 3 ? `<span class="tag-more">+${tags.length - 3}</span>` : ''}</div>`
+      : '';
+
+    return `
+      <article class="memory-card${m.pinned ? ' pinned-card' : ''}"
+               data-category="${m.category}"
+               data-id="${m.id}"
+               style="animation-delay: ${Math.min(i,8) * 0.05}s"
+               draggable="true">
+        <div class="card-drag-handle" title="Drag to reorder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <div class="card-top">
+          <h3 class="card-title">${m.pinned ? '<span class="pin-indicator">📌</span>' : ''}${escapeHtml(m.title)}</h3>
+          <div class="card-actions">
+            <button class="${pinBtnClass}" data-pin-id="${m.id}" title="${pinTitle}" aria-label="${pinTitle}">
+              <svg viewBox="0 0 24 24" fill="${m.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="17" x2="12" y2="22"></line>
+                <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+              </svg>
+            </button>
+            <button class="card-lock-btn ${m.locked ? 'locked' : ''}" data-lock-id="${m.id}" data-locked="${m.locked}" title="${m.locked ? 'Unlock' : 'Lock'} memory">
               ${lockIconSVG}
             </button>
           </div>
-          <p class="card-content ${m.locked ? 'locked-content' : ''}">${contentDisplay}</p>
-          <div class="card-bottom">
-            <span class="card-category" data-cat="${m.category}">${emoji} ${capitalize(m.category)}</span>
-            <span class="card-date">${date}</span>
-          </div>
-        </article>
-      `;
-    }).join('');
+        </div>
+        <p class="card-content ${m.locked ? 'locked-content' : ''}">${contentDisplay}</p>
+        ${cardTagsHTML}
+        <div class="card-bottom">
+          <span class="card-category" data-cat="${m.category}">${emoji} ${capitalize(m.category)}</span>
+          <span class="card-date">${date}</span>
+        </div>
+      </article>
+    `;
+  }
 
-    // Attach lock button listeners
+  function attachCardListeners() {
+    // Lock buttons
     document.querySelectorAll('.card-lock-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
-        const id = btn.dataset.lockId;
-        const locked = btn.dataset.locked === 'true';
-        handleLockClick(id, locked);
+        handleLockClick(btn.dataset.lockId, btn.dataset.locked === 'true');
       });
     });
-
-    // Attach card click listeners (view)
+    // Pin buttons
+    document.querySelectorAll('.card-pin-btn').forEach(btn => {
+      btn.addEventListener('click', e => { e.stopPropagation(); togglePin(btn.dataset.pinId); });
+    });
+    // Card tag chips — click to filter
+    document.querySelectorAll('.tag-chip-sm').forEach(chip => {
+      chip.addEventListener('click', e => {
+        e.stopPropagation();
+        filterTag = chip.dataset.tag;
+        fetchMemories();
+      });
+    });
+    // Card click → view
     document.querySelectorAll('.memory-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const id = card.dataset.id;
-        const mem = memories.find(m => m.id === id);
-        if (mem) {
-          if (mem.locked) {
-            actionTargetMemoryId = id;
-            isPermanentUnlock = false;
-            pinEntryOverlay.classList.add('active');
-            enterPinInput.focus();
-          } else {
-            openViewModal(mem);
-          }
+      card.addEventListener('click', e => {
+        if (e.target.closest('.card-actions, .card-drag-handle, .tag-chip-sm')) return;
+        const mem = allMemories.find(m => m.id === card.dataset.id);
+        if (!mem) return;
+        if (mem.locked) {
+          actionTargetMemoryId = mem.id;
+          isPermanentUnlock = false;
+          pinEntryOverlay.classList.add('active');
+          enterPinInput.focus();
+        } else {
+          openViewModal(mem);
         }
       });
+    });
+  }
+
+  // --- Drag & Drop ---
+  function attachDragHandlers() {
+    document.querySelectorAll('.memory-card[draggable]').forEach(card => {
+      card.addEventListener('dragstart', e => {
+        dragSrcId = card.dataset.id;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.memory-card').forEach(c => c.classList.remove('drag-over'));
+      });
+      card.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (card.dataset.id !== dragSrcId) {
+          document.querySelectorAll('.memory-card').forEach(c => c.classList.remove('drag-over'));
+          card.classList.add('drag-over');
+        }
+      });
+      card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+      card.addEventListener('drop', e => {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        const tgtId = card.dataset.id;
+        if (dragSrcId === tgtId) return;
+        const srcIdx = allMemories.findIndex(m => m.id === dragSrcId);
+        const tgtIdx = allMemories.findIndex(m => m.id === tgtId);
+        if (srcIdx === -1 || tgtIdx === -1) return;
+        const reordered = [...allMemories];
+        const [moved] = reordered.splice(srcIdx, 1);
+        reordered.splice(tgtIdx, 0, moved);
+        allMemories = reordered;
+        render();
+        saveReorder(reordered);
+      });
+    });
+  }
+
+  // --- Infinite Scroll (IntersectionObserver) ---
+  function initInfiniteScroll() {
+    if (!scrollSentinel) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+        loadMore();
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(scrollSentinel);
+  }
+
+  // --- Form Tag Input ---
+  function renderFormTags() {
+    if (!formTagPills) return;
+    formTagPills.innerHTML = formTags.map(t => `
+      <span class="form-tag-pill">
+        #${escapeHtml(t)}
+        <button type="button" class="form-tag-pill-remove" data-remove="${escapeHtml(t)}" aria-label="Remove tag ${t}">&times;</button>
+      </span>
+    `).join('');
+    formTagPills.querySelectorAll('.form-tag-pill-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        formTags = formTags.filter(t => t !== btn.dataset.remove);
+        renderFormTags();
+      });
+    });
+  }
+
+  function addTag(raw) {
+    const tag = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!tag || formTags.includes(tag) || formTags.length >= 10) return;
+    formTags.push(tag);
+    renderFormTags();
+  }
+
+  if (tagTextInput) {
+    tagTextInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        addTag(tagTextInput.value);
+        tagTextInput.value = '';
+      }
+      if (e.key === 'Backspace' && tagTextInput.value === '' && formTags.length > 0) {
+        formTags.pop();
+        renderFormTags();
+      }
+    });
+    tagTextInput.addEventListener('blur', () => {
+      if (tagTextInput.value.trim()) {
+        addTag(tagTextInput.value);
+        tagTextInput.value = '';
+      }
     });
   }
 
@@ -265,6 +519,9 @@
     contentInput.value = '';
     categoryInput.value = 'personal';
     charCount.textContent = '0 / 2000';
+    formTags = [];
+    renderFormTags();
+    if (tagTextInput) tagTextInput.value = '';
     modalOverlay.classList.add('active');
     titleInput.focus();
   }
@@ -276,31 +533,45 @@
     contentInput.value = memory.content;
     categoryInput.value = memory.category;
     charCount.textContent = `${memory.content.length} / 2000`;
+    formTags = Array.isArray(memory.tags) ? [...memory.tags] : [];
+    renderFormTags();
+    if (tagTextInput) tagTextInput.value = '';
     modalOverlay.classList.add('active');
     titleInput.focus();
   }
 
-  function closeFormModal() {
-    modalOverlay.classList.remove('active');
-  }
+  function closeFormModal() { modalOverlay.classList.remove('active'); }
 
   function openViewModal(memory) {
     currentViewMemory = memory;
-    const categoryEmojis = {
-      personal: '💜', work: '💼', ideas: '💡', secrets: '🤫', important: '⭐'
-    };
+    const categoryEmojis = { personal:'💜', work:'💼', ideas:'💡', secrets:'🤫', important:'⭐' };
     const emoji = categoryEmojis[memory.category] || '📝';
-
     viewModalTitle.textContent = memory.title;
     viewCategory.innerHTML = `<span class="card-category" data-cat="${memory.category}">${emoji} ${capitalize(memory.category)}</span>`;
-    viewContent.textContent = memory.locked ? 'This memory is locked. Unlock it to view the content.' : memory.content;
+    // Tags in view modal
+    const tags = memory.tags || [];
+    if (viewTagsEl) {
+      viewTagsEl.innerHTML = tags.map(t => `<button class="tag-chip" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('');
+      viewTagsEl.querySelectorAll('.tag-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          filterTag = chip.dataset.tag;
+          closeViewModal();
+          fetchMemories();
+        });
+      });
+    }
+    viewContent.textContent = memory.content;
     viewMeta.textContent = `Created ${formatDateFull(memory.createdAt)} · Updated ${formatDateFull(memory.updatedAt)}`;
     viewOverlay.classList.add('active');
   }
 
-  function closeViewModal() {
-    viewOverlay.classList.remove('active');
-    currentViewMemory = null;
+  function closeViewModal() { viewOverlay.classList.remove('active'); currentViewMemory = null; }
+
+  function isAnyModalOpen() {
+    return modalOverlay.classList.contains('active') ||
+      viewOverlay.classList.contains('active') ||
+      pinSetupOverlay.classList.contains('active') ||
+      pinEntryOverlay.classList.contains('active');
   }
 
   // --- Confirm Dialog ---
@@ -308,46 +579,22 @@
     return new Promise(resolve => {
       const overlay = document.createElement('div');
       overlay.className = 'confirm-overlay';
-      overlay.innerHTML = `
-        <div class="confirm-dialog">
-          <h3>${title}</h3>
-          <p>${message}</p>
-          <div class="confirm-actions">
-            <button class="btn btn-secondary" id="confirm-no">Cancel</button>
-            <button class="btn btn-danger" id="confirm-yes">Delete</button>
-          </div>
-        </div>
-      `;
+      overlay.innerHTML = `<div class="confirm-dialog"><h3>${title}</h3><p>${message}</p><div class="confirm-actions"><button class="btn btn-secondary" id="confirm-no">Cancel</button><button class="btn btn-danger" id="confirm-yes">Delete</button></div></div>`;
       document.body.appendChild(overlay);
-      overlay.querySelector('#confirm-yes').addEventListener('click', () => {
-        document.body.removeChild(overlay);
-        resolve(true);
-      });
-      overlay.querySelector('#confirm-no').addEventListener('click', () => {
-        document.body.removeChild(overlay);
-        resolve(false);
-      });
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-          document.body.removeChild(overlay);
-          resolve(false);
-        }
-      });
+      overlay.querySelector('#confirm-yes').addEventListener('click', () => { document.body.removeChild(overlay); resolve(true); });
+      overlay.querySelector('#confirm-no').addEventListener('click', () => { document.body.removeChild(overlay); resolve(false); });
+      overlay.addEventListener('click', e => { if (e.target === overlay) { document.body.removeChild(overlay); resolve(false); } });
     });
   }
 
   // --- Toast ---
   function showToast(message, type = 'info') {
-    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    const icons = { success:'✅', error:'❌', info:'ℹ️' };
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.innerHTML = `<span class="toast-icon">${icons[type]}</span> ${escapeHtml(message)}`;
     toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.add('toast-out');
-      toast.addEventListener('animationend', () => toast.remove());
-    }, 2800);
+    setTimeout(() => { toast.classList.add('toast-out'); toast.addEventListener('animationend', () => toast.remove()); }, 2800);
   }
 
   // --- Utilities ---
@@ -356,35 +603,21 @@
     div.textContent = text;
     return div.innerHTML;
   }
-
-  function capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
+  function capitalize(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
   function formatDate(iso) {
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = now - d;
+    const d = new Date(iso), now = new Date(), diff = now - d;
     if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
+    if (diff < 604800000) return `${Math.floor(diff/86400000)}d ago`;
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
   }
-
   function formatDateFull(iso) {
-    return new Date(iso).toLocaleDateString('en-US', {
-      month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    return new Date(iso).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
   }
-
-  // Debounce
   function debounce(fn, delay) {
-    let timer;
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), delay);
-    };
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
   }
 
   // --- PIN Modals ---
@@ -392,29 +625,25 @@
   if (pinEntryClose) pinEntryClose.addEventListener('click', () => pinEntryOverlay.classList.remove('active'));
 
   if (pinSetupForm) {
-    pinSetupForm.addEventListener('submit', async (e) => {
+    pinSetupForm.addEventListener('submit', async e => {
       e.preventDefault();
       if (!actionTargetMemoryId) return;
       const pin = newPinInput.value;
       try {
         const res = await fetch(`/api/memories/${actionTargetMemoryId}/lock`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin })
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin })
         });
-        if (!res.ok) throw new Error('Failed to lock');
+        if (!res.ok) throw new Error();
         showToast('Memory locked 🔒', 'success');
         pinSetupOverlay.classList.remove('active');
         newPinInput.value = '';
         fetchMemories();
-      } catch (e) {
-        showToast('Failed to lock memory', 'error');
-      }
+      } catch { showToast('Failed to lock memory', 'error'); }
     });
   }
 
   if (pinEntryForm) {
-    pinEntryForm.addEventListener('submit', async (e) => {
+    pinEntryForm.addEventListener('submit', async e => {
       e.preventDefault();
       if (!actionTargetMemoryId) return;
       const pin = enterPinInput.value;
@@ -422,35 +651,21 @@
         const url = isPermanentUnlock
           ? `/api/memories/${actionTargetMemoryId}/unlock`
           : `/api/memories/${actionTargetMemoryId}/verify`;
-        const method = isPermanentUnlock ? 'PUT' : 'POST';
-
         const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin })
+          method: isPermanentUnlock ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin })
         });
         if (!res.ok) throw new Error('Invalid PIN');
-
         pinEntryOverlay.classList.remove('active');
         enterPinInput.value = '';
-
         if (isPermanentUnlock) {
           showToast('Memory unlocked 🔓', 'success');
           fetchMemories();
         } else {
-          const unlockedMem = await res.json();
-          // /verify intentionally leaves `locked: true` on the returned memory
-          // (the lock isn't being removed, just peeked past). openViewModal()
-          // decides what to show based on that same flag, so without this
-          // override it would say "unlock it to view the content" even though
-          // the real content is sitting right there in unlockedMem.content.
-          // This only affects this one modal render — it doesn't touch the
-          // shared `memories` array, so the card in the grid stays blurred.
-          openViewModal({ ...unlockedMem, locked: false });
+          const mem = await res.json();
+          openViewModal({ ...mem, locked: false });
         }
-      } catch (e) {
-        showToast('Invalid PIN', 'error');
-      }
+      } catch { showToast('Invalid PIN', 'error'); }
     });
   }
 
@@ -460,20 +675,23 @@
   fabAdd.addEventListener('click', openCreateModal);
 
   // Form Submit
-  memoryForm.addEventListener('submit', async (e) => {
+  memoryForm.addEventListener('submit', async e => {
     e.preventDefault();
+    // flush any pending tag text
+    if (tagTextInput && tagTextInput.value.trim()) {
+      addTag(tagTextInput.value);
+      tagTextInput.value = '';
+    }
     const data = {
       title: titleInput.value,
       content: contentInput.value,
-      category: categoryInput.value
+      category: categoryInput.value,
+      tags: formTags
     };
     const editId = memoryIdInput.value;
     if (editId) {
       const result = await updateMemory(editId, data);
-      if (result) {
-        showToast('Memory updated ✨', 'success');
-        fetchMemories();
-      }
+      if (result) { showToast('Memory updated ✨', 'success'); fetchMemories(); }
     } else {
       await createMemory(data);
     }
@@ -481,38 +699,46 @@
   });
 
   // Char counter
-  contentInput.addEventListener('input', () => {
-    charCount.textContent = `${contentInput.value.length} / 2000`;
-  });
+  contentInput.addEventListener('input', () => { charCount.textContent = `${contentInput.value.length} / 2000`; });
 
   // Modal close
   btnCancel.addEventListener('click', closeFormModal);
   modalClose.addEventListener('click', closeFormModal);
-  modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) closeFormModal();
-  });
+  modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeFormModal(); });
 
   viewModalClose.addEventListener('click', closeViewModal);
-  viewOverlay.addEventListener('click', (e) => {
-    if (e.target === viewOverlay) closeViewModal();
-  });
+  viewOverlay.addEventListener('click', e => { if (e.target === viewOverlay) closeViewModal(); });
 
   // View modal actions
   viewEditBtn.addEventListener('click', () => {
-    if (currentViewMemory) {
-      closeViewModal();
-      openEditModal(currentViewMemory);
+    if (currentViewMemory) { 
+      const mem = currentViewMemory;
+      closeViewModal(); 
+      openEditModal(mem); 
     }
   });
-
   viewDeleteBtn.addEventListener('click', async () => {
     if (!currentViewMemory) return;
-    const confirmed = await showConfirm('Delete Memory?', 'This action cannot be undone. This memory will be permanently erased from your vault.');
-    if (confirmed) {
-      closeViewModal();
-      deleteMemory(currentViewMemory.id);
-    }
+    const memId = currentViewMemory.id;
+    const confirmed = await showConfirm('Delete Memory?', 'This cannot be undone.');
+    if (confirmed) { closeViewModal(); deleteMemory(memId); }
   });
+
+  // Sort
+  if (sortSelect) {
+    sortSelect.addEventListener('change', () => {
+      sortBy = sortSelect.value;
+      fetchMemories();
+    });
+  }
+
+  // Tag clear
+  if (tagClearBtn) {
+    tagClearBtn.addEventListener('click', () => {
+      filterTag = null;
+      fetchMemories();
+    });
+  }
 
   // Category filters
   catButtons.forEach(btn => {
@@ -523,6 +749,7 @@
       searchInput.value = '';
       searchQuery = '';
       searchClear.classList.remove('visible');
+      if (searchKbd) searchKbd.style.display = '';
       fetchMemories();
     });
   });
@@ -530,7 +757,6 @@
   // Search
   const debouncedSearch = debounce(() => {
     searchQuery = searchInput.value.trim();
-    // Reset category to "all" when searching
     if (searchQuery) {
       catButtons.forEach(b => b.classList.remove('active'));
       document.querySelector('[data-category="all"]').classList.add('active');
@@ -540,31 +766,70 @@
   }, 300);
 
   searchInput.addEventListener('input', () => {
-    searchClear.classList.toggle('visible', searchInput.value.length > 0);
+    const hasVal = searchInput.value.length > 0;
+    searchClear.classList.toggle('visible', hasVal);
+    if (searchKbd) searchKbd.style.display = hasVal ? 'none' : '';
     debouncedSearch();
   });
 
   searchClear.addEventListener('click', () => {
-    searchInput.value = '';
-    searchQuery = '';
+    searchInput.value = ''; searchQuery = '';
     searchClear.classList.remove('visible');
-    fetchMemories();
-    searchInput.focus();
+    if (searchKbd) searchKbd.style.display = '';
+    fetchMemories(); searchInput.focus();
   });
 
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
+  if (emptySearchClear) {
+    emptySearchClear.addEventListener('click', () => {
+      searchInput.value = ''; searchQuery = '';
+      searchClear.classList.remove('visible');
+      if (searchKbd) searchKbd.style.display = '';
+      filterTag = null;
+      fetchMemories(); searchInput.focus();
+    });
+  }
+
+  // --- Keyboard Shortcuts ---
+  document.addEventListener('keydown', e => {
+    const appVisible = document.getElementById('app-wrapper') &&
+      !document.getElementById('app-wrapper').classList.contains('hidden');
+    if (!appVisible) return;
+    const tag = document.activeElement.tagName;
+    const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
     if (e.key === 'Escape') {
-      closeFormModal();
-      closeViewModal();
+      closeFormModal(); closeViewModal();
       if (pinSetupOverlay) pinSetupOverlay.classList.remove('active');
       if (pinEntryOverlay) pinEntryOverlay.classList.remove('active');
+      if (document.activeElement === searchInput) searchInput.blur();
+      return;
     }
-    // Ctrl/Cmd + K to focus search
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault();
-      searchInput.focus();
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); searchInput.select(); return; }
+    if (isTyping) return;
+
+    // Handle view modal specific shortcuts first
+    if (viewOverlay.classList.contains('active')) {
+      if ((e.key === 'e' || e.key === 'E') && currentViewMemory) {
+        e.preventDefault();
+        const mem = currentViewMemory;
+        closeViewModal();
+        openEditModal(mem);
+        return;
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && currentViewMemory) {
+        e.preventDefault();
+        const memId = currentViewMemory.id;
+        showConfirm('Delete Memory?', 'This cannot be undone.').then(ok => {
+          if (ok) { closeViewModal(); deleteMemory(memId); }
+        });
+        return;
+      }
     }
+
+    if (isAnyModalOpen()) return;
+
+    if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openCreateModal(); return; }
+    if (e.key === '/') { e.preventDefault(); searchInput.focus(); return; }
   });
 
   // --- Landing Page Logic ---
@@ -575,41 +840,28 @@
   const landingNav = document.getElementById('landing-nav');
 
   function enterVault() {
-    // Animate landing page out
     landingPage.classList.add('leaving');
-
     setTimeout(() => {
       landingPage.style.display = 'none';
       landingNav.style.display = 'none';
-
-      // Show app wrapper with animation
       appWrapper.classList.remove('hidden');
       appWrapper.classList.add('entering');
-
-      // Trigger reflow for animation
       void appWrapper.offsetHeight;
       appWrapper.classList.add('visible');
       appWrapper.classList.remove('entering');
-
-      // Now init the app
       fetchMemories();
+      initInfiniteScroll();
     }, 700);
   }
 
   heroEnterBtn.addEventListener('click', enterVault);
   navEnterBtn.addEventListener('click', enterVault);
 
-  // Landing nav scroll effect
-  function handleLandingScroll() {
+  window.addEventListener('scroll', () => {
     if (!landingPage || landingPage.style.display === 'none') return;
-    if (window.scrollY > 60) {
-      landingNav.classList.add('scrolled');
-    } else {
-      landingNav.classList.remove('scrolled');
-    }
-  }
-  window.addEventListener('scroll', handleLandingScroll);
+    landingNav.classList.toggle('scrolled', window.scrollY > 60);
+  });
 
-  // --- Init (particles run on landing too) ---
+  // --- Init ---
   initParticles();
 })();

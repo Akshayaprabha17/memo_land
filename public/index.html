@@ -132,11 +132,21 @@
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="search-input" placeholder="Search your memories..." autocomplete="off" />
+        <input type="text" id="search-input" placeholder="Search memories..." autocomplete="off" />
+        <kbd class="search-kbd" id="search-kbd">⌘K</kbd>
         <button class="search-clear" id="search-clear" aria-label="Clear search">&times;</button>
       </div>
       <div class="memory-count" id="memory-count">
         <span id="count-number">0</span> memories
+      </div>
+      <div class="sort-wrapper">
+        <select id="sort-select" class="sort-select" aria-label="Sort memories">
+          <option value="newest">↓ Newest</option>
+          <option value="oldest">↑ Oldest</option>
+          <option value="alpha-az">A → Z</option>
+          <option value="alpha-za">Z → A</option>
+          <option value="edited">Most Edited</option>
+        </select>
       </div>
     </div>
   </header>
@@ -165,20 +175,65 @@
     </div>
   </nav>
 
+  <!-- Tag filter bar (shown when tags exist) -->
+  <div id="tag-filter-bar" class="tag-filter-bar" style="display:none;">
+    <span class="tag-filter-label">Tags</span>
+    <div class="tag-filter-chips" id="tag-filter-chips"></div>
+    <button class="tag-clear-btn" id="tag-clear-btn" style="display:none;">× Clear</button>
+  </div>
+
   <!-- Main Content -->
   <main id="main-content">
-    <!-- Empty State -->
+
+    <!-- Sort / results toolbar -->
+    <div class="sort-toolbar" id="sort-toolbar">
+      <span class="results-info" id="results-info"></span>
+    </div>
+
+    <!-- Empty State: no memories at all -->
     <div class="empty-state" id="empty-state" style="display: none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
       </svg>
       <h2>No memories yet</h2>
-      <p>Your vault is empty. Click the <strong>+</strong> button to store your first memory.</p>
+      <p>Your vault is empty. Press <kbd>N</kbd> or click the <strong>+</strong> button to store your first memory.</p>
+    </div>
+
+    <!-- Empty State: search returned nothing -->
+    <div class="empty-state empty-state-search" id="empty-search-state" style="display: none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        <line x1="8" y1="11" x2="14" y2="11"></line>
+      </svg>
+      <h2>No results found</h2>
+      <p id="empty-search-msg">No memories match your search.</p>
+      <button class="btn btn-secondary" id="empty-search-clear">Clear Search</button>
+    </div>
+
+    <!-- Skeleton loader -->
+    <div class="memory-grid" id="skeleton-grid" style="display:none;">
+      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
+      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
+      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
+      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
+      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
+      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
     </div>
 
     <!-- Memory Grid -->
     <div class="memory-grid" id="memory-grid"></div>
+
+    <!-- Infinite scroll sentinel -->
+    <div id="scroll-sentinel" style="height:1px;"></div>
+
+    <!-- Load more spinner -->
+    <div id="load-more-spinner" class="load-more-spinner" style="display:none;">
+      <div class="spinner-ring"></div>
+      <span>Loading more memories...</span>
+    </div>
+
   </main>
 
   <!-- Floating Add Button -->
@@ -219,6 +274,14 @@
             </select>
           </div>
         </div>
+        <div class="form-group">
+          <label>Tags <span class="form-optional">optional</span></label>
+          <div class="tag-input-wrapper" id="tag-input-wrapper">
+            <div class="form-tag-pills" id="form-tag-pills"></div>
+            <input type="text" id="tag-text-input" placeholder="Type a tag, press Enter or comma..." autocomplete="off" maxlength="30" />
+          </div>
+          <p class="form-hint">Max 10 tags · letters, numbers, hyphens</p>
+        </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" id="btn-cancel">Cancel</button>
           <button type="submit" class="btn btn-primary" id="btn-save">
@@ -242,6 +305,7 @@
       </div>
       <div class="view-modal-body">
         <div class="view-category" id="view-category"></div>
+        <div class="view-tags" id="view-tags"></div>
         <div class="view-content" id="view-content"></div>
         <div class="view-meta" id="view-meta"></div>
       </div>

@@ -1513,3 +1513,524 @@ body::before {
     font-size: 0.8rem;
   }
 }
+
+/* ============================================
+   UX Polish — Added Features
+   ============================================ */
+
+/* --- Keyboard Shortcuts Bar --- */
+.shortcuts-bar {
+  position: sticky;
+  top: 115px;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--space-xl);
+  background: rgba(6, 9, 24, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.shortcuts-bar::-webkit-scrollbar { display: none; }
+
+.shortcut-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding: 2px 8px 2px 0;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.shortcut-hint:last-child { border-right: none; }
+
+.shortcuts-bar kbd,
+.shortcut-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.06);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* --- Search KBD hint (inside search box) --- */
+.search-kbd {
+  position: absolute;
+  right: 36px; /* leave room for clear button */
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px;
+  background: rgba(255,255,255,0.05);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+#search-input:focus ~ .search-kbd { opacity: 0; }
+
+/* Adjust search-clear position to leave room for kbd */
+#search-input {
+  padding-right: 88px;
+}
+#search-input:focus {
+  padding-right: 40px;
+}
+
+/* --- Empty Search State --- */
+.empty-state-search .btn {
+  margin-top: var(--space-md);
+}
+.empty-state kbd {
+  display: inline-flex;
+  padding: 1px 7px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 5px;
+  background: rgba(255,255,255,0.07);
+  font-size: 0.8em;
+}
+
+/* --- Skeleton Loader --- */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sk {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.09) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+.sk-title  { height: 20px; width: 65%; }
+.sk-line   { height: 13px; width: 100%; }
+.sk-short  { width: 55%; }
+.sk-footer { height: 13px; width: 40%; margin-top: 8px; }
+
+/* --- Pin Button --- */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.card-pin-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.25s var(--ease-spring);
+  opacity: 0;
+}
+
+.memory-card:hover .card-pin-btn { opacity: 1; }
+.card-pin-btn.pinned { opacity: 1; color: var(--accent-gold); }
+
+.card-pin-btn svg { width: 14px; height: 14px; }
+
+.card-pin-btn:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: var(--accent-gold);
+  transform: scale(1.15);
+}
+
+.card-pin-btn.pinned:hover {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+/* Pinned card highlight */
+.pinned-card {
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.06);
+}
+
+.pin-indicator {
+  font-size: 0.85em;
+  margin-right: 4px;
+}
+
+/* --- Drag & Drop --- */
+.card-drag-handle {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 20px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 4px;
+}
+.card-drag-handle:active { cursor: grabbing; }
+.card-drag-handle svg { width: 14px; height: 14px; }
+.memory-card:hover .card-drag-handle { opacity: 0.5; }
+.memory-card:hover .card-drag-handle:hover { opacity: 1; }
+
+/* shift card content to not overlap handle */
+.memory-card {
+  padding-left: calc(var(--space-lg) + 18px);
+}
+
+.memory-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.97);
+  cursor: grabbing;
+}
+
+.memory-card.drag-over {
+  border-color: var(--accent-violet) !important;
+  box-shadow: 0 0 0 2px var(--accent-violet-soft), 0 8px 32px rgba(124,58,237,0.2);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   Growth Features — Sort / Tags / Pagination
+   ============================================ */
+
+/* --- Sort Dropdown (in header) --- */
+.sort-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.sort-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 8px 32px 8px 14px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-full);
+  background: var(--bg-glass) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.25s;
+  white-space: nowrap;
+}
+
+.sort-select:hover,
+.sort-select:focus {
+  border-color: var(--accent-violet);
+  background-color: rgba(124,58,237,0.06);
+  color: var(--text-primary);
+}
+
+.sort-select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* --- Sort toolbar (above grid) --- */
+.sort-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--space-sm) 0 var(--space-md);
+  min-height: 28px;
+}
+
+.results-info {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* --- Tag Filter Bar (between nav and main) --- */
+.tag-filter-bar {
+  position: sticky;
+  top: 115px;
+  z-index: 85;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 8px var(--space-xl);
+  background: rgba(6, 9, 24, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tag-filter-bar::-webkit-scrollbar { display: none; }
+
+.tag-filter-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tag-filter-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tag-filter-chips::-webkit-scrollbar { display: none; }
+
+/* Generic tag chip used in both filter bar and card display */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid rgba(124,58,237,0.25);
+  border-radius: var(--radius-full);
+  background: rgba(124,58,237,0.08);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.tag-chip:hover {
+  border-color: var(--accent-violet);
+  background: rgba(124,58,237,0.14);
+  color: var(--accent-violet);
+}
+
+.tag-chip.active {
+  border-color: var(--accent-violet);
+  background: var(--accent-violet-soft);
+  color: var(--accent-violet);
+  font-weight: 600;
+}
+
+.tag-chip .tag-count {
+  font-size: 0.68rem;
+  opacity: 0.65;
+  padding: 1px 4px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.08);
+}
+
+.tag-clear-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tag-clear-btn:hover {
+  border-color: var(--accent-rose);
+  color: var(--accent-rose);
+}
+
+/* --- Card tag pills (small, non-interactive) --- */
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: var(--space-sm);
+}
+
+.tag-chip-sm {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(124,58,237,0.1);
+  border: 1px solid rgba(124,58,237,0.2);
+  color: #a78bfa;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.tag-chip-sm:hover {
+  background: rgba(124,58,237,0.2);
+  border-color: var(--accent-violet);
+  color: var(--accent-violet);
+}
+
+.tag-more {
+  display: inline-flex;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+/* --- View modal tag display --- */
+.view-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 12px;
+}
+
+.view-tags:empty { display: none; }
+
+/* --- Form tag input --- */
+.tag-input-wrapper {
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+  padding: 8px 12px;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tag-input-wrapper:focus-within {
+  border-color: var(--accent-violet);
+  box-shadow: 0 0 0 3px var(--accent-violet-soft);
+}
+
+.form-tag-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.form-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 4px 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--accent-violet-soft);
+  border: 1px solid rgba(124,58,237,0.3);
+  color: #c4b5fd;
+  font-size: 0.78rem;
+  font-weight: 500;
+  animation: pillPop 0.18s var(--ease-spring);
+}
+
+@keyframes pillPop {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.form-tag-pill-remove {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  color: #c4b5fd;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  transition: background 0.15s;
+  padding: 0;
+}
+.form-tag-pill-remove:hover {
+  background: rgba(244,63,94,0.35);
+  color: #fff;
+}
+
+#tag-text-input {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  outline: none;
+  width: 100%;
+  padding: 0;
+  caret-color: var(--accent-violet);
+}
+#tag-text-input::placeholder { color: var(--text-muted); }
+
+/* Form hint + optional label */
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.form-optional {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  padding: 1px 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-full);
+  margin-left: 4px;
+}
+
+/* --- Load more spinner --- */
+.load-more-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: var(--space-xl) 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+@keyframes spinRing {
+  to { transform: rotate(360deg); }
+}
+
+.spinner-ring {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(124,58,237,0.2);
+  border-top-color: var(--accent-violet);
+  border-radius: 50%;
+  animation: spinRing 0.7s linear infinite;
+}

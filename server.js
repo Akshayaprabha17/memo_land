@@ -120,53 +120,133 @@ app.post('/api/memories/:id/verify', (req, res) => {
 
 // --- Standard Memory Endpoints ---
 
-// GET all memories
+// GET all memories — supports ?page, ?limit, ?sort, ?category, ?tag
 app.get('/api/memories', (req, res) => {
   let memories = readMemories();
-  const { category } = req.query;
+  const { category, tag, sort = 'newest', page = 1, limit = 12 } = req.query;
 
   if (category && category !== 'all') {
     memories = memories.filter(m => m.category === category);
   }
+  if (tag) {
+    memories = memories.filter(m => Array.isArray(m.tags) && m.tags.includes(tag));
+  }
 
-  memories.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  res.json(memories.map(stripSensitive));
+  // Sort
+  switch (sort) {
+    case 'oldest':
+      memories.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      break;
+    case 'alpha-az':
+      memories.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+    case 'alpha-za':
+      memories.sort((a, b) => b.title.localeCompare(a.title));
+      break;
+    case 'edited':
+      memories.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      break;
+    default: // newest — pinned float to top
+      memories.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        const ao = a.sortOrder ?? new Date(a.createdAt).getTime();
+        const bo = b.sortOrder ?? new Date(b.createdAt).getTime();
+        return bo - ao;
+      });
+  }
+
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 12));
+  const total = memories.length;
+  const start = (pageNum - 1) * limitNum;
+  const paged = memories.slice(start, start + limitNum);
+
+  res.json({
+    data: paged.map(stripSensitive),
+    total,
+    page: pageNum,
+    limit: limitNum,
+    hasMore: start + limitNum < total
+  });
 });
 
-// GET search memories
+// GET search memories — supports ?q, ?tag, ?sort, ?page, ?limit
 app.get('/api/memories/search', (req, res) => {
-  const { q } = req.query;
-  if (!q) return res.json([]);
+  const { q, tag, sort = 'newest', page = 1, limit = 12 } = req.query;
+  if (!q) return res.json({ data: [], total: 0, page: 1, limit: 12, hasMore: false });
 
-  const memories = readMemories();
+  let memories = readMemories();
   const query = q.toLowerCase();
 
-  const results = memories.filter(m => {
+  memories = memories.filter(m => {
     if (m.title.toLowerCase().includes(query)) return true;
     if (m.category.toLowerCase().includes(query)) return true;
-    // Only search content if not locked
     if (!m.locked && m.content.toLowerCase().includes(query)) return true;
+    if (Array.isArray(m.tags) && m.tags.some(t => t.toLowerCase().includes(query))) return true;
     return false;
   });
 
-  results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  res.json(results.map(stripSensitive));
+  if (tag) {
+    memories = memories.filter(m => Array.isArray(m.tags) && m.tags.includes(tag));
+  }
+
+  switch (sort) {
+    case 'oldest': memories.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)); break;
+    case 'alpha-az': memories.sort((a, b) => a.title.localeCompare(b.title)); break;
+    case 'alpha-za': memories.sort((a, b) => b.title.localeCompare(a.title)); break;
+    case 'edited': memories.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)); break;
+    default: memories.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 12));
+  const total = memories.length;
+  const start = (pageNum - 1) * limitNum;
+  const paged = memories.slice(start, start + limitNum);
+
+  res.json({
+    data: paged.map(stripSensitive),
+    total,
+    page: pageNum,
+    limit: limitNum,
+    hasMore: start + limitNum < total
+  });
+});
+
+// GET all unique tags with usage counts
+app.get('/api/tags', (req, res) => {
+  const memories = readMemories();
+  const tagMap = {};
+  memories.forEach(m => {
+    (m.tags || []).forEach(t => { tagMap[t] = (tagMap[t] || 0) + 1; });
+  });
+  const tags = Object.entries(tagMap)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  res.json(tags);
 });
 
 // POST create a new memory
 app.post('/api/memories', (req, res) => {
-  const { title, content, category } = req.body;
+  const { title, content, category, tags } = req.body;
   if (!title || !content) {
     return res.status(400).json({ error: 'Title and content are required.' });
   }
 
   const memories = readMemories();
+  const cleanTags = Array.isArray(tags)
+    ? [...new Set(tags.map(t => t.trim().toLowerCase()).filter(t => t.length > 0))].slice(0, 10)
+    : [];
   const newMemory = {
     id: uuidv4(),
     title: title.trim(),
     content: content.trim(),
     category: category || 'personal',
-    locked: false, // Must use /lock endpoint to lock it
+    tags: cleanTags,
+    locked: false,
+    pinned: false,
+    sortOrder: Date.now(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -175,7 +255,32 @@ app.post('/api/memories', (req, res) => {
   res.status(201).json(stripSensitive(newMemory));
 });
 
-// PUT update a memory (only title, content, category)
+// PATCH toggle pin on a memory
+app.patch('/api/memories/:id/pin', (req, res) => {
+  const { id } = req.params;
+  const memories = readMemories();
+  const index = memories.findIndex(m => m.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Memory not found.' });
+  memories[index].pinned = !memories[index].pinned;
+  memories[index].updatedAt = new Date().toISOString();
+  writeMemories(memories);
+  res.json(stripSensitive(memories[index]));
+});
+
+// PUT reorder memories (accepts array of {id, sortOrder})
+app.put('/api/memories/reorder', (req, res) => {
+  const { order } = req.body; // [{id, sortOrder}, ...]
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array.' });
+  const memories = readMemories();
+  order.forEach(({ id, sortOrder }) => {
+    const m = memories.find(m => m.id === id);
+    if (m) m.sortOrder = sortOrder;
+  });
+  writeMemories(memories);
+  res.json({ ok: true });
+});
+
+// PUT update a memory (title, content, category, tags)
 app.put('/api/memories/:id', (req, res) => {
   const { id } = req.params;
   const memories = readMemories();
@@ -186,10 +291,13 @@ app.put('/api/memories/:id', (req, res) => {
     return res.status(401).json({ error: 'Vault is locked. Cannot modify locked memory without unlocking first.' });
   }
 
-  const { title, content, category } = req.body;
+  const { title, content, category, tags } = req.body;
   if (title !== undefined) memories[index].title = title.trim();
   if (content !== undefined) memories[index].content = content.trim();
   if (category !== undefined) memories[index].category = category;
+  if (Array.isArray(tags)) {
+    memories[index].tags = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(t => t.length > 0))].slice(0, 10);
+  }
 
   memories[index].updatedAt = new Date().toISOString();
   writeMemories(memories);
