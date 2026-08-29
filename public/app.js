@@ -11,8 +11,8 @@
   let searchQuery = '';
   let currentViewMemory = null;
   let currentPin = null;
-  let inactivityTimer = null;
-  let isVaultPinSet = false;
+  let actionTargetMemoryId = null;
+  let isPermanentUnlock = false;
 
   // --- DOM Elements ---
   const grid = document.getElementById('memory-grid');
@@ -54,7 +54,7 @@
   const pinSetupForm = document.getElementById('pin-setup-form');
   const newPinInput = document.getElementById('new-pin-input');
   const pinSetupClose = document.getElementById('pin-setup-close');
-  
+
   const pinEntryOverlay = document.getElementById('pin-entry-overlay');
   const pinEntryForm = document.getElementById('pin-entry-form');
   const enterPinInput = document.getElementById('enter-pin-input');
@@ -105,60 +105,7 @@
     animate();
   }
 
-  // --- Security & Activity ---
-  function getHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      ...(currentPin ? { 'X-Vault-PIN': currentPin } : {})
-    };
-  }
-
-  function lockVault() {
-    if (currentPin) {
-      currentPin = null;
-      showToast('Vault locked instantly', 'info');
-      closeFormModal();
-      closeViewModal();
-      pinEntryOverlay.classList.remove('active');
-      pinSetupOverlay.classList.remove('active');
-      fetchMemories();
-    }
-  }
-
-  function resetInactivityTimer() {
-    if (!currentPin) return; // Only timer if unlocked
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(() => {
-      currentPin = null;
-      showToast('Vault auto-locked due to inactivity', 'info');
-      closeFormModal();
-      closeViewModal();
-      fetchMemories();
-    }, 60000); // 60 seconds
-  }
-
-  let throttleTimer = false;
-  function handleActivity() {
-    if (throttleTimer) return;
-    throttleTimer = true;
-    setTimeout(() => { throttleTimer = false; }, 1000);
-    resetInactivityTimer();
-  }
-
-  // Activity listeners to reset timer
-  ['mousemove', 'keydown', 'scroll', 'click'].forEach(evt => {
-    window.addEventListener(evt, handleActivity);
-  });
-
-  async function checkPinStatus() {
-    try {
-      const res = await fetch('/api/status');
-      const data = await res.json();
-      isVaultPinSet = data.isPinSet;
-    } catch (e) {
-      console.error('Failed to check pin status', e);
-    }
-  }
+  // --- Security Removed (Global) ---
 
   // --- API Helpers ---
   async function fetchMemories() {
@@ -169,7 +116,7 @@
       } else if (activeCategory !== 'all') {
         url += `?category=${activeCategory}`;
       }
-      const res = await fetch(url, { headers: getHeaders() });
+      const res = await fetch(url);
       memories = await res.json();
       render();
     } catch (err) {
@@ -181,7 +128,7 @@
     try {
       const res = await fetch('/api/memories', {
         method: 'POST',
-        headers: getHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       if (!res.ok) {
@@ -199,7 +146,7 @@
     try {
       const res = await fetch(`/api/memories/${id}`, {
         method: 'PUT',
-        headers: getHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       if (!res.ok) {
@@ -215,10 +162,7 @@
 
   async function deleteMemory(id) {
     try {
-      const res = await fetch(`/api/memories/${id}`, { 
-        method: 'DELETE',
-        headers: getHeaders()
-      });
+      const res = await fetch(`/api/memories/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Delete failed');
@@ -230,23 +174,15 @@
     }
   }
 
-  async function toggleLock(id, currentLocked) {
-    if (!currentLocked && !isVaultPinSet) {
+  function handleLockClick(id, currentLocked) {
+    actionTargetMemoryId = id;
+    if (!currentLocked) {
       pinSetupOverlay.classList.add('active');
       newPinInput.focus();
-      return;
-    }
-    
-    if (currentLocked && !currentPin) {
-       pinEntryOverlay.classList.add('active');
-       enterPinInput.focus();
-       return;
-    }
-
-    const result = await updateMemory(id, { locked: !currentLocked });
-    if (result) {
-      showToast(result.locked ? 'Memory locked 🔒' : 'Memory unlocked 🔓', 'success');
-      fetchMemories();
+    } else {
+      isPermanentUnlock = true;
+      pinEntryOverlay.classList.add('active');
+      enterPinInput.focus();
     }
   }
 
@@ -298,7 +234,7 @@
         e.stopPropagation();
         const id = btn.dataset.lockId;
         const locked = btn.dataset.locked === 'true';
-        toggleLock(id, locked);
+        handleLockClick(id, locked);
       });
     });
 
@@ -308,12 +244,14 @@
         const id = card.dataset.id;
         const mem = memories.find(m => m.id === id);
         if (mem) {
-           if (mem.locked && !currentPin) {
-             pinEntryOverlay.classList.add('active');
-             enterPinInput.focus();
-           } else {
-             openViewModal(mem);
-           }
+          if (mem.locked) {
+            actionTargetMemoryId = id;
+            isPermanentUnlock = false;
+            pinEntryOverlay.classList.add('active');
+            enterPinInput.focus();
+          } else {
+            openViewModal(mem);
+          }
         }
       });
     });
@@ -456,23 +394,21 @@
   if (pinSetupForm) {
     pinSetupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!actionTargetMemoryId) return;
       const pin = newPinInput.value;
       try {
-        const res = await fetch('/api/setup', {
-          method: 'POST',
+        const res = await fetch(`/api/memories/${actionTargetMemoryId}/lock`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pin })
         });
-        if (!res.ok) throw new Error('Setup failed');
-        isVaultPinSet = true;
-        currentPin = pin;
-        showToast('Master PIN set successfully', 'success');
+        if (!res.ok) throw new Error('Failed to lock');
+        showToast('Memory locked 🔒', 'success');
         pinSetupOverlay.classList.remove('active');
         newPinInput.value = '';
-        resetInactivityTimer();
         fetchMemories();
       } catch (e) {
-        showToast('Failed to set PIN', 'error');
+        showToast('Failed to lock memory', 'error');
       }
     });
   }
@@ -480,20 +416,38 @@
   if (pinEntryForm) {
     pinEntryForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!actionTargetMemoryId) return;
       const pin = enterPinInput.value;
       try {
-        const res = await fetch('/api/verify', {
-          method: 'POST',
+        const url = isPermanentUnlock
+          ? `/api/memories/${actionTargetMemoryId}/unlock`
+          : `/api/memories/${actionTargetMemoryId}/verify`;
+        const method = isPermanentUnlock ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+          method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pin })
         });
         if (!res.ok) throw new Error('Invalid PIN');
-        currentPin = pin;
-        showToast('Vault Unlocked 🔓', 'success');
+
         pinEntryOverlay.classList.remove('active');
         enterPinInput.value = '';
-        resetInactivityTimer();
-        fetchMemories();
+
+        if (isPermanentUnlock) {
+          showToast('Memory unlocked 🔓', 'success');
+          fetchMemories();
+        } else {
+          const unlockedMem = await res.json();
+          // /verify intentionally leaves `locked: true` on the returned memory
+          // (the lock isn't being removed, just peeked past). openViewModal()
+          // decides what to show based on that same flag, so without this
+          // override it would say "unlock it to view the content" even though
+          // the real content is sitting right there in unlockedMem.content.
+          // This only affects this one modal render — it doesn't touch the
+          // shared `memories` array, so the card in the grid stays blurred.
+          openViewModal({ ...unlockedMem, locked: false });
+        }
       } catch (e) {
         showToast('Invalid PIN', 'error');
       }
@@ -601,14 +555,10 @@
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (currentPin) {
-        lockVault(); // Panic mode
-      } else {
-        closeFormModal();
-        closeViewModal();
-        if (pinSetupOverlay) pinSetupOverlay.classList.remove('active');
-        if (pinEntryOverlay) pinEntryOverlay.classList.remove('active');
-      }
+      closeFormModal();
+      closeViewModal();
+      if (pinSetupOverlay) pinSetupOverlay.classList.remove('active');
+      if (pinEntryOverlay) pinEntryOverlay.classList.remove('active');
     }
     // Ctrl/Cmd + K to focus search
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -642,7 +592,6 @@
       appWrapper.classList.remove('entering');
 
       // Now init the app
-      checkPinStatus();
       fetchMemories();
     }, 700);
   }
@@ -664,4 +613,3 @@
   // --- Init (particles run on landing too) ---
   initParticles();
 })();
-

@@ -6,7 +6,7 @@
     "category": "personal",
     "locked": false,
     "createdAt": "2026-08-29T00:00:00.000Z",
-    "updatedAt": "2026-08-29T11:10:22.389Z"
+    "updatedAt": "2026-08-29T11:40:32.550Z"
   },
   {
     "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
@@ -15,7 +15,7 @@
     "category": "ideas",
     "locked": false,
     "createdAt": "2026-08-29T00:00:00.000Z",
-    "updatedAt": "2026-08-29T11:09:49.307Z"
+    "updatedAt": "2026-08-29T13:12:32.024Z"
   },
   {
     "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
@@ -33,6 +33,26 @@
     "category": "personal",
     "locked": false,
     "createdAt": "2026-08-29T08:11:22.582Z",
-    "updatedAt": "2026-08-29T11:10:18.217Z"
+    "updatedAt": "2026-08-29T11:40:29.289Z"
+  },
+  {
+    "id": "ce242114-5727-463f-875b-e785869e117d",
+    "title": "Routine",
+    "content": "need to do skin care at night",
+    "category": "personal",
+    "locked": false,
+    "createdAt": "2026-08-29T11:50:39.226Z",
+    "updatedAt": "2026-08-29T13:11:58.454Z"
+  },
+  {
+    "id": "20e7d23e-8342-4d8f-9445-5b832dc56e2c",
+    "title": "Test Secret Memory",
+    "content": "My secret password is my catspaw",
+    "category": "work",
+    "locked": true,
+    "createdAt": "2026-08-29T11:53:55.868Z",
+    "updatedAt": "2026-08-29T13:12:38.450Z",
+    "salt": "7b1ad96a057ec746504d81cede7ae4a6",
+    "pinHash": "36a930974d3bc847a6182f49111c83f4d505b30634412e4ffe0902841340b36f037d43e727e2dbe4912dba664007a0144527e629355ef45b788b5b333d3045a0"
   }
 ]

@@ -263,17 +263,17 @@
   <div class="modal-overlay" id="pin-setup-overlay">
     <div class="modal" id="pin-setup-modal">
       <div class="modal-header">
-        <h2>Setup Vault PIN</h2>
+        <h2>Lock Memory</h2>
         <button class="modal-close" id="pin-setup-close" aria-label="Close">&times;</button>
       </div>
       <form id="pin-setup-form">
         <div class="form-group">
-          <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">To lock memories, you must set a master PIN. Don't forget it!</p>
-          <label for="new-pin-input">Master PIN (4+ digits)</label>
+          <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">Set a PIN to lock this specific memory. You will need it to unlock it.</p>
+          <label for="new-pin-input">Memory PIN (4+ digits)</label>
           <input type="password" id="new-pin-input" placeholder="••••" required minlength="4" pattern="[0-9]*" inputmode="numeric" />
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Save PIN</button>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Lock It</button>
         </div>
       </form>
     </div>
@@ -283,16 +283,16 @@
   <div class="modal-overlay" id="pin-entry-overlay">
     <div class="modal" id="pin-entry-modal">
       <div class="modal-header">
-        <h2>Vault is Locked</h2>
+        <h2>Memory is Locked</h2>
         <button class="modal-close" id="pin-entry-close" aria-label="Close">&times;</button>
       </div>
       <form id="pin-entry-form">
         <div class="form-group">
-          <label for="enter-pin-input">Enter Master PIN</label>
+          <label for="enter-pin-input">Enter PIN</label>
           <input type="password" id="enter-pin-input" placeholder="••••" required inputmode="numeric" />
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Unlock Vault</button>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Unlock</button>
         </div>
       </form>
     </div>

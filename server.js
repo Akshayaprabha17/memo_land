@@ -8,7 +8,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'memories.json');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
 // Middleware
 app.use(express.json());
@@ -32,136 +31,133 @@ function writeMemories(memories) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(memories, null, 2), 'utf-8');
 }
 
-function readSettings() {
-  try {
-    return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
-  } catch (err) {
-    return { pinHash: null, salt: null };
-  }
-}
-
-function writeSettings(settings) {
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
-}
-
 function hashPin(pin, salt) {
   return crypto.pbkdf2Sync(pin, salt, 10000, 64, 'sha512').toString('hex');
 }
 
-function isPinValid(pin) {
+function isPinValid(pin, memory) {
+  if (!memory.locked || !memory.pinHash) return true;
   if (!pin) return false;
-  const settings = readSettings();
-  if (!settings.pinHash) return true; // No PIN set means everything is unlocked
-  const hash = hashPin(pin, settings.salt);
-  return hash === settings.pinHash;
+  const hash = hashPin(pin, memory.salt);
+  return hash === memory.pinHash;
 }
 
-// --- Security Endpoints ---
+function stripSensitive(memory) {
+  const m = { ...memory };
+  if (m.locked) {
+    m.content = '[LOCKED_CONTENT]';
+  }
+  delete m.pinHash;
+  delete m.salt;
+  return m;
+}
 
-// Check if a PIN is set
-app.get('/api/status', (req, res) => {
-  const settings = readSettings();
-  res.json({ isPinSet: !!settings.pinHash });
-});
+// --- Per-Memory Security Endpoints ---
 
-// Setup initial PIN
-app.post('/api/setup', (req, res) => {
+// Lock a specific memory
+app.put('/api/memories/:id/lock', (req, res) => {
+  const { id } = req.params;
   const { pin } = req.body;
   if (!pin || pin.length < 4) return res.status(400).json({ error: 'PIN must be at least 4 characters.' });
-  
-  const settings = readSettings();
-  if (settings.pinHash) return res.status(400).json({ error: 'PIN already set.' });
+
+  const memories = readMemories();
+  const index = memories.findIndex(m => m.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Memory not found.' });
+  if (memories[index].locked) return res.status(400).json({ error: 'Memory is already locked.' });
 
   const salt = crypto.randomBytes(16).toString('hex');
-  settings.salt = salt;
-  settings.pinHash = hashPin(pin, salt);
-  writeSettings(settings);
+  memories[index].salt = salt;
+  memories[index].pinHash = hashPin(pin, salt);
+  memories[index].locked = true;
+  memories[index].updatedAt = new Date().toISOString();
   
-  res.json({ success: true });
+  writeMemories(memories);
+  res.json(stripSensitive(memories[index]));
 });
 
-// Verify PIN
-app.post('/api/verify', (req, res) => {
+// Permanently unlock a specific memory
+app.put('/api/memories/:id/unlock', (req, res) => {
+  const { id } = req.params;
   const { pin } = req.body;
-  if (isPinValid(pin)) {
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ error: 'Invalid PIN' });
+  
+  const memories = readMemories();
+  const index = memories.findIndex(m => m.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Memory not found.' });
+  if (!memories[index].locked) return res.status(400).json({ error: 'Memory is not locked.' });
+
+  if (!isPinValid(pin, memories[index])) {
+    return res.status(401).json({ error: 'Invalid PIN' });
   }
+
+  memories[index].locked = false;
+  delete memories[index].pinHash;
+  delete memories[index].salt;
+  memories[index].updatedAt = new Date().toISOString();
+  
+  writeMemories(memories);
+  res.json(stripSensitive(memories[index]));
 });
 
-// --- Memory Endpoints ---
+// Temporarily verify a PIN to view a memory (does not change locked state)
+app.post('/api/memories/:id/verify', (req, res) => {
+  const { id } = req.params;
+  const { pin } = req.body;
+  
+  const memories = readMemories();
+  const memory = memories.find(m => m.id === id);
+  if (!memory) return res.status(404).json({ error: 'Memory not found.' });
+  
+  if (memory.locked && !isPinValid(pin, memory)) {
+    return res.status(401).json({ error: 'Invalid PIN' });
+  }
+  
+  // Return the FULL memory including content, but strip hash/salt
+  const m = { ...memory };
+  delete m.pinHash;
+  delete m.salt;
+  res.json(m);
+});
+
+// --- Standard Memory Endpoints ---
 
 // GET all memories
 app.get('/api/memories', (req, res) => {
-  const clientPin = req.headers['x-vault-pin'];
-  const unlocked = isPinValid(clientPin);
-  
   let memories = readMemories();
   const { category } = req.query;
-  
+
   if (category && category !== 'all') {
     memories = memories.filter(m => m.category === category);
   }
-  
-  // Sort by newest first
+
   memories.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
-  // Strip content for locked memories if not authenticated
-  const safeMemories = memories.map(m => {
-    if (m.locked && !unlocked) {
-      return { ...m, content: '[LOCKED_CONTENT]' };
-    }
-    return m;
-  });
-  
-  res.json(safeMemories);
+  res.json(memories.map(stripSensitive));
 });
 
 // GET search memories
 app.get('/api/memories/search', (req, res) => {
   const { q } = req.query;
   if (!q) return res.json([]);
-  
-  const clientPin = req.headers['x-vault-pin'];
-  const unlocked = isPinValid(clientPin);
-  
+
   const memories = readMemories();
   const query = q.toLowerCase();
-  
+
   const results = memories.filter(m => {
     if (m.title.toLowerCase().includes(query)) return true;
     if (m.category.toLowerCase().includes(query)) return true;
-    // Only search content if unlocked or memory is not locked
-    if ((!m.locked || unlocked) && m.content.toLowerCase().includes(query)) return true;
+    // Only search content if not locked
+    if (!m.locked && m.content.toLowerCase().includes(query)) return true;
     return false;
   });
-  
+
   results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
-  const safeResults = results.map(m => {
-    if (m.locked && !unlocked) {
-      return { ...m, content: '[LOCKED_CONTENT]' };
-    }
-    return m;
-  });
-  
-  res.json(safeResults);
+  res.json(results.map(stripSensitive));
 });
 
 // POST create a new memory
 app.post('/api/memories', (req, res) => {
-  const { title, content, category, locked } = req.body;
+  const { title, content, category } = req.body;
   if (!title || !content) {
     return res.status(400).json({ error: 'Title and content are required.' });
-  }
-  
-  // If creating as locked, must have a PIN set in the system
-  if (locked) {
-    const settings = readSettings();
-    if (!settings.pinHash) {
-      return res.status(400).json({ error: 'Cannot lock memory without setting a Vault PIN first.' });
-    }
   }
 
   const memories = readMemories();
@@ -170,65 +166,50 @@ app.post('/api/memories', (req, res) => {
     title: title.trim(),
     content: content.trim(),
     category: category || 'personal',
-    locked: !!locked,
+    locked: false, // Must use /lock endpoint to lock it
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
   memories.push(newMemory);
   writeMemories(memories);
-  res.status(201).json(newMemory);
+  res.status(201).json(stripSensitive(newMemory));
 });
 
-// PUT update a memory
+// PUT update a memory (only title, content, category)
 app.put('/api/memories/:id', (req, res) => {
   const { id } = req.params;
-  const clientPin = req.headers['x-vault-pin'];
-  const unlocked = isPinValid(clientPin);
-  
   const memories = readMemories();
   const index = memories.findIndex(m => m.id === id);
   if (index === -1) return res.status(404).json({ error: 'Memory not found.' });
-  
-  // If it's currently locked, require PIN to edit anything
-  if (memories[index].locked && !unlocked) {
-    return res.status(401).json({ error: 'Vault is locked. Cannot modify locked memory.' });
+
+  if (memories[index].locked) {
+    return res.status(401).json({ error: 'Vault is locked. Cannot modify locked memory without unlocking first.' });
   }
 
-  const { title, content, category, locked } = req.body;
+  const { title, content, category } = req.body;
   if (title !== undefined) memories[index].title = title.trim();
   if (content !== undefined) memories[index].content = content.trim();
   if (category !== undefined) memories[index].category = category;
-  
-  if (locked !== undefined) {
-    if (locked) {
-       const settings = readSettings();
-       if (!settings.pinHash) return res.status(400).json({ error: 'Set a Vault PIN first.' });
-    }
-    memories[index].locked = locked;
-  }
-  
+
   memories[index].updatedAt = new Date().toISOString();
   writeMemories(memories);
-  res.json(memories[index]);
+  res.json(stripSensitive(memories[index]));
 });
 
 // DELETE a memory
 app.delete('/api/memories/:id', (req, res) => {
   const { id } = req.params;
-  const clientPin = req.headers['x-vault-pin'];
-  const unlocked = isPinValid(clientPin);
-  
   let memories = readMemories();
   const index = memories.findIndex(m => m.id === id);
   if (index === -1) return res.status(404).json({ error: 'Memory not found.' });
-  
-  if (memories[index].locked && !unlocked) {
-    return res.status(401).json({ error: 'Vault is locked. Cannot delete locked memory.' });
+
+  if (memories[index].locked) {
+    return res.status(401).json({ error: 'Vault is locked. Cannot delete locked memory without unlocking first.' });
   }
 
   const deleted = memories.splice(index, 1)[0];
   writeMemories(memories);
-  res.json(deleted);
+  res.json(stripSensitive(deleted));
 });
 
 // Fallback: serve index.html for SPA
