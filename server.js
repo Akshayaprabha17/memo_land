@@ -120,16 +120,19 @@ app.post('/api/memories/:id/verify', (req, res) => {
 
 // --- Standard Memory Endpoints ---
 
-// GET all memories — supports ?page, ?limit, ?sort, ?category, ?tag
+// GET all memories — supports ?page, ?limit, ?sort, ?category, ?tag, ?date
 app.get('/api/memories', (req, res) => {
   let memories = readMemories();
-  const { category, tag, sort = 'newest', page = 1, limit = 12 } = req.query;
+  const { category, tag, date, sort = 'newest', page = 1, limit = 12 } = req.query;
 
   if (category && category !== 'all') {
     memories = memories.filter(m => m.category === category);
   }
   if (tag) {
     memories = memories.filter(m => Array.isArray(m.tags) && m.tags.includes(tag));
+  }
+  if (date) {
+    memories = memories.filter(m => m.createdAt.startsWith(date));
   }
 
   // Sort
@@ -171,24 +174,29 @@ app.get('/api/memories', (req, res) => {
   });
 });
 
-// GET search memories — supports ?q, ?tag, ?sort, ?page, ?limit
+// GET search memories — supports ?q, ?tag, ?date, ?sort, ?page, ?limit
 app.get('/api/memories/search', (req, res) => {
-  const { q, tag, sort = 'newest', page = 1, limit = 12 } = req.query;
-  if (!q) return res.json({ data: [], total: 0, page: 1, limit: 12, hasMore: false });
+  const { q, tag, date, sort = 'newest', page = 1, limit = 12 } = req.query;
+  if (!q && !date) return res.json({ data: [], total: 0, page: 1, limit: 12, hasMore: false });
 
   let memories = readMemories();
-  const query = q.toLowerCase();
-
-  memories = memories.filter(m => {
-    if (m.title.toLowerCase().includes(query)) return true;
-    if (m.category.toLowerCase().includes(query)) return true;
-    if (!m.locked && m.content.toLowerCase().includes(query)) return true;
-    if (Array.isArray(m.tags) && m.tags.some(t => t.toLowerCase().includes(query))) return true;
-    return false;
-  });
+  
+  if (q) {
+    const query = q.toLowerCase();
+    memories = memories.filter(m => {
+      if (m.title.toLowerCase().includes(query)) return true;
+      if (m.category.toLowerCase().includes(query)) return true;
+      if (!m.locked && m.content.toLowerCase().includes(query)) return true;
+      if (Array.isArray(m.tags) && m.tags.some(t => t.toLowerCase().includes(query))) return true;
+      return false;
+    });
+  }
 
   if (tag) {
     memories = memories.filter(m => Array.isArray(m.tags) && m.tags.includes(tag));
+  }
+  if (date) {
+    memories = memories.filter(m => m.createdAt.startsWith(date));
   }
 
   switch (sort) {
@@ -225,6 +233,17 @@ app.get('/api/tags', (req, res) => {
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   res.json(tags);
+});
+
+// GET heatmap data (counts per day)
+app.get('/api/heatmap', (req, res) => {
+  const memories = readMemories();
+  const counts = {};
+  memories.forEach(m => {
+    const date = m.createdAt.split('T')[0];
+    counts[date] = (counts[date] || 0) + 1;
+  });
+  res.json(counts);
 });
 
 // POST create a new memory

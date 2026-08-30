@@ -46,9 +46,10 @@
     "category": "personal",
     "locked": false,
     "createdAt": "2026-08-29T11:50:39.226Z",
-    "updatedAt": "2026-08-29T14:49:05.791Z",
+    "updatedAt": "2026-08-30T02:06:09.314Z",
     "sortOrder": 4,
-    "tags": []
+    "tags": [],
+    "pinned": false
   },
   {
     "id": "20e7d23e-8342-4d8f-9445-5b832dc56e2c",

@@ -1,6 +1,6 @@
 /* ============================================
    MEMORY LOCK — Client Application Logic
-   v3: Pagination, Sort, Tags (many-to-many)
+   v4: Heatmap, Markdown, Theme Toggle
    ============================================ */
 
 (function () {
@@ -16,6 +16,7 @@
   let searchQuery = '';
   let sortBy = 'newest';
   let filterTag = null;       // active tag filter (null = none)
+  let filterDate = null;      // active date filter (YYYY-MM-DD)
   let formTags = [];          // tags being edited in the form
 
   let currentViewMemory = null;
@@ -45,6 +46,16 @@
   const loadMoreSpinner = document.getElementById('load-more-spinner');
   const scrollSentinel = document.getElementById('scroll-sentinel');
 
+  // Heatmap
+  const heatmapContainer = document.getElementById('heatmap-container');
+  const heatmapGrid = document.getElementById('heatmap-grid');
+  const heatmapClearBtn = document.getElementById('heatmap-clear-btn');
+
+  // Theme
+  const themeToggleBtn = document.getElementById('theme-toggle');
+  const iconMoon = document.querySelector('.icon-moon');
+  const iconSun = document.querySelector('.icon-sun');
+
   // Form Modal
   const modalOverlay = document.getElementById('modal-overlay');
   const modalTitle = document.getElementById('modal-title');
@@ -52,6 +63,9 @@
   const memoryIdInput = document.getElementById('memory-id');
   const titleInput = document.getElementById('memory-title-input');
   const contentInput = document.getElementById('memory-content-input');
+  const contentPreview = document.getElementById('memory-content-preview');
+  const tabWrite = document.getElementById('tab-write');
+  const tabPreview = document.getElementById('tab-preview');
   const categoryInput = document.getElementById('memory-category-input');
   const charCount = document.getElementById('char-count');
   const btnCancel = document.getElementById('btn-cancel');
@@ -112,6 +126,43 @@
     animate();
   }
 
+  // --- Theme Toggle ---
+  function initTheme() {
+    const isLight = localStorage.getItem('theme') === 'light';
+    if (isLight) enableLightMode();
+    
+    themeToggleBtn.addEventListener('click', () => {
+      if (document.body.classList.contains('light-theme')) {
+        disableLightMode();
+      } else {
+        enableLightMode();
+      }
+    });
+  }
+  function enableLightMode() {
+    document.body.classList.add('light-theme');
+    iconMoon.style.display = 'none';
+    iconSun.style.display = 'block';
+    localStorage.setItem('theme', 'light');
+  }
+  function disableLightMode() {
+    document.body.classList.remove('light-theme');
+    iconMoon.style.display = 'block';
+    iconSun.style.display = 'none';
+    localStorage.setItem('theme', 'dark');
+  }
+
+  // --- Markdown Helper ---
+  function renderMarkdown(text) {
+    if (!text) return '';
+    // marked and DOMPurify are loaded via CDN
+    if (window.marked && window.DOMPurify) {
+      const rawHtml = marked.parse(text, { breaks: true });
+      return DOMPurify.sanitize(rawHtml);
+    }
+    return escapeHtml(text).replace(/\n/g, '<br>');
+  }
+
   // --- Skeleton helpers ---
   function showSkeleton() {
     if (skeletonGrid) skeletonGrid.style.display = 'grid';
@@ -128,11 +179,12 @@
 
   // --- Build fetch URL ---
   function buildUrl(pg) {
-    const base = searchQuery ? '/api/memories/search' : '/api/memories';
+    const base = (searchQuery || filterDate) ? '/api/memories/search' : '/api/memories';
     const params = new URLSearchParams({ page: pg, limit: PAGE_LIMIT, sort: sortBy });
     if (searchQuery) params.set('q', searchQuery);
     else if (activeCategory !== 'all') params.set('category', activeCategory);
     if (filterTag) params.set('tag', filterTag);
+    if (filterDate) params.set('date', filterDate);
     return `${base}?${params}`;
   }
 
@@ -155,6 +207,7 @@
       render();
       updateResultsInfo();
       fetchTags();
+      fetchHeatmap();
     } catch (err) {
       hideSkeleton();
       showToast('Failed to load memories', 'error');
@@ -189,9 +242,14 @@
     if (!resultsInfo) return;
     if (totalCount === 0) { resultsInfo.textContent = ''; return; }
     const shown = allMemories.length;
-    resultsInfo.textContent = shown < totalCount
+    let text = shown < totalCount
       ? `Showing ${shown} of ${totalCount} memories`
       : `${totalCount} ${totalCount === 1 ? 'memory' : 'memories'}`;
+    if (filterDate) {
+      const d = new Date(filterDate);
+      text += ` on ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+    resultsInfo.textContent = text;
   }
 
   // --- Tags API ---
@@ -222,6 +280,84 @@
       });
     });
   }
+
+  // --- Heatmap API ---
+  async function fetchHeatmap() {
+    try {
+      const res = await fetch('/api/heatmap');
+      const counts = await res.json();
+      renderHeatmap(counts);
+    } catch (e) { /* silent */ }
+  }
+
+  function renderHeatmap(counts) {
+    if (!heatmapGrid) return;
+    
+    heatmapGrid.innerHTML = '';
+    const today = new Date();
+    // 52 weeks * 7 days = 364 days ago
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 364);
+    
+    // Ensure we start on a Sunday to align the grid properly
+    while(startDate.getDay() !== 0) {
+      startDate.setDate(startDate.getDate() - 1);
+    }
+
+    const fragment = document.createDocumentFragment();
+    let iterDate = new Date(startDate);
+    
+    while (iterDate <= today) {
+      const dateStr = iterDate.toISOString().split('T')[0];
+      const count = counts[dateStr] || 0;
+      
+      let lvl = 0;
+      if (count > 0) lvl = 1;
+      if (count >= 2) lvl = 2;
+      if (count >= 4) lvl = 3;
+      if (count >= 7) lvl = 4;
+
+      const cell = document.createElement('div');
+      cell.className = `heatmap-cell lvl-${lvl}`;
+      if (filterDate === dateStr) cell.classList.add('active-filter');
+      
+      const niceDate = iterDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      cell.title = count === 0 ? `No memories on ${niceDate}` : `${count} memor${count===1?'y':'ies'} on ${niceDate}`;
+      cell.dataset.date = dateStr;
+      
+      cell.addEventListener('click', () => {
+        if (filterDate === dateStr) {
+          filterDate = null; // toggle off
+        } else {
+          filterDate = dateStr;
+          // Clear text search when filtering by date to avoid confusion
+          searchQuery = '';
+          searchInput.value = '';
+          searchClear.classList.remove('visible');
+        }
+        heatmapClearBtn.style.display = filterDate ? 'inline-block' : 'none';
+        fetchMemories();
+      });
+      
+      fragment.appendChild(cell);
+      iterDate.setDate(iterDate.getDate() + 1);
+    }
+    
+    heatmapGrid.appendChild(fragment);
+    
+    // Scroll to the far right (most recent)
+    const scrollContainer = document.querySelector('.heatmap-scroll');
+    if (scrollContainer) scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+  }
+
+  if (heatmapClearBtn) {
+    heatmapClearBtn.addEventListener('click', () => {
+      filterDate = null;
+      heatmapClearBtn.style.display = 'none';
+      fetchMemories();
+    });
+  }
+
 
   // --- CRUD ---
   async function createMemory(data) {
@@ -297,23 +433,26 @@
   function render(appendOnly = false) {
     countNumber.textContent = totalCount;
 
-    const noMemories = allMemories.length === 0 && !searchQuery && !filterTag;
-    const noResults = allMemories.length === 0 && (!!searchQuery || !!filterTag);
+    const noMemories = allMemories.length === 0 && !searchQuery && !filterTag && !filterDate;
+    const noResults = allMemories.length === 0 && (!!searchQuery || !!filterTag || !!filterDate);
 
     emptyState.style.display = noMemories ? 'flex' : 'none';
+    if (heatmapContainer) {
+      heatmapContainer.style.display = (noMemories && !filterDate) ? 'none' : 'flex';
+    }
+
     if (emptySearchState) {
       emptySearchState.style.display = noResults ? 'flex' : 'none';
       if (noResults && emptySearchMsg) {
-        emptySearchMsg.textContent = searchQuery
-          ? `No memories match "${searchQuery}"`
-          : `No memories tagged #${filterTag}`;
+        if (filterDate) emptySearchMsg.textContent = `No memories on this date.`;
+        else if (searchQuery) emptySearchMsg.textContent = `No memories match "${searchQuery}"`;
+        else emptySearchMsg.textContent = `No memories tagged #${filterTag}`;
       }
     }
 
     if (noMemories || noResults) { grid.innerHTML = ''; return; }
 
     if (appendOnly) {
-      // Append only new cards (those beyond previous render)
       const existingCount = grid.querySelectorAll('.memory-card').length;
       const newMemories = allMemories.slice(existingCount);
       const frag = document.createDocumentFragment();
@@ -338,7 +477,12 @@
     const lockIconSVG = m.locked
       ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 5-5 5 5 0 0 1 5 5"></path><line x1="17" y1="7" x2="17" y2="4"></line></svg>`;
-    const contentDisplay = m.locked ? '••••• This memory is locked •••••' : escapeHtml(m.content);
+    
+    // Markdown rendering for card content
+    const contentDisplay = m.locked 
+      ? '••••• This memory is locked •••••' 
+      : `<div class="markdown-body">${renderMarkdown(m.content)}</div>`;
+
     const pinBtnClass = `card-pin-btn${m.pinned ? ' pinned' : ''}`;
     const pinTitle = m.pinned ? 'Unpin memory' : 'Pin to top';
 
@@ -370,7 +514,7 @@
             </button>
           </div>
         </div>
-        <p class="card-content ${m.locked ? 'locked-content' : ''}">${contentDisplay}</p>
+        <div class="card-content ${m.locked ? 'locked-content' : ''}">${contentDisplay}</div>
         ${cardTagsHTML}
         <div class="card-bottom">
           <span class="card-category" data-cat="${m.category}">${emoji} ${capitalize(m.category)}</span>
@@ -392,7 +536,7 @@
     document.querySelectorAll('.card-pin-btn').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); togglePin(btn.dataset.pinId); });
     });
-    // Card tag chips — click to filter
+    // Card tag chips
     document.querySelectorAll('.tag-chip-sm').forEach(chip => {
       chip.addEventListener('click', e => {
         e.stopPropagation();
@@ -403,7 +547,7 @@
     // Card click → view
     document.querySelectorAll('.memory-card').forEach(card => {
       card.addEventListener('click', e => {
-        if (e.target.closest('.card-actions, .card-drag-handle, .tag-chip-sm')) return;
+        if (e.target.closest('.card-actions, .card-drag-handle, .tag-chip-sm, a')) return;
         const mem = allMemories.find(m => m.id === card.dataset.id);
         if (!mem) return;
         if (mem.locked) {
@@ -456,7 +600,7 @@
     });
   }
 
-  // --- Infinite Scroll (IntersectionObserver) ---
+  // --- Infinite Scroll ---
   function initInfiniteScroll() {
     if (!scrollSentinel) return;
     const observer = new IntersectionObserver(entries => {
@@ -511,6 +655,24 @@
     });
   }
 
+  // --- Tabs ---
+  function setTab(isWrite) {
+    if (isWrite) {
+      tabWrite.classList.add('active');
+      tabPreview.classList.remove('active');
+      contentInput.style.display = 'block';
+      contentPreview.style.display = 'none';
+    } else {
+      tabWrite.classList.remove('active');
+      tabPreview.classList.add('active');
+      contentInput.style.display = 'none';
+      contentPreview.style.display = 'block';
+      contentPreview.innerHTML = renderMarkdown(contentInput.value);
+    }
+  }
+  if (tabWrite) tabWrite.addEventListener('click', () => setTab(true));
+  if (tabPreview) tabPreview.addEventListener('click', () => setTab(false));
+
   // --- Modals ---
   function openCreateModal() {
     modalTitle.textContent = 'New Memory';
@@ -522,6 +684,7 @@
     formTags = [];
     renderFormTags();
     if (tagTextInput) tagTextInput.value = '';
+    setTab(true);
     modalOverlay.classList.add('active');
     titleInput.focus();
   }
@@ -536,6 +699,7 @@
     formTags = Array.isArray(memory.tags) ? [...memory.tags] : [];
     renderFormTags();
     if (tagTextInput) tagTextInput.value = '';
+    setTab(true);
     modalOverlay.classList.add('active');
     titleInput.focus();
   }
@@ -548,7 +712,7 @@
     const emoji = categoryEmojis[memory.category] || '📝';
     viewModalTitle.textContent = memory.title;
     viewCategory.innerHTML = `<span class="card-category" data-cat="${memory.category}">${emoji} ${capitalize(memory.category)}</span>`;
-    // Tags in view modal
+    
     const tags = memory.tags || [];
     if (viewTagsEl) {
       viewTagsEl.innerHTML = tags.map(t => `<button class="tag-chip" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('');
@@ -560,7 +724,11 @@
         });
       });
     }
-    viewContent.textContent = memory.content;
+    
+    // Render Markdown in View Modal
+    viewContent.innerHTML = renderMarkdown(memory.content);
+    viewContent.classList.add('markdown-body');
+    
     viewMeta.textContent = `Created ${formatDateFull(memory.createdAt)} · Updated ${formatDateFull(memory.updatedAt)}`;
     viewOverlay.classList.add('active');
   }
@@ -574,7 +742,6 @@
       pinEntryOverlay.classList.contains('active');
   }
 
-  // --- Confirm Dialog ---
   function showConfirm(title, message) {
     return new Promise(resolve => {
       const overlay = document.createElement('div');
@@ -587,7 +754,6 @@
     });
   }
 
-  // --- Toast ---
   function showToast(message, type = 'info') {
     const icons = { success:'✅', error:'❌', info:'ℹ️' };
     const toast = document.createElement('div');
@@ -670,14 +836,10 @@
   }
 
   // --- Event Listeners ---
-
-  // FAB
   fabAdd.addEventListener('click', openCreateModal);
 
-  // Form Submit
   memoryForm.addEventListener('submit', async e => {
     e.preventDefault();
-    // flush any pending tag text
     if (tagTextInput && tagTextInput.value.trim()) {
       addTag(tagTextInput.value);
       tagTextInput.value = '';
@@ -698,10 +860,7 @@
     closeFormModal();
   });
 
-  // Char counter
   contentInput.addEventListener('input', () => { charCount.textContent = `${contentInput.value.length} / 2000`; });
-
-  // Modal close
   btnCancel.addEventListener('click', closeFormModal);
   modalClose.addEventListener('click', closeFormModal);
   modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeFormModal(); });
@@ -709,7 +868,6 @@
   viewModalClose.addEventListener('click', closeViewModal);
   viewOverlay.addEventListener('click', e => { if (e.target === viewOverlay) closeViewModal(); });
 
-  // View modal actions
   viewEditBtn.addEventListener('click', () => {
     if (currentViewMemory) { 
       const mem = currentViewMemory;
@@ -724,15 +882,12 @@
     if (confirmed) { closeViewModal(); deleteMemory(memId); }
   });
 
-  // Sort
   if (sortSelect) {
     sortSelect.addEventListener('change', () => {
       sortBy = sortSelect.value;
       fetchMemories();
     });
   }
-
-  // Tag clear
   if (tagClearBtn) {
     tagClearBtn.addEventListener('click', () => {
       filterTag = null;
@@ -740,7 +895,6 @@
     });
   }
 
-  // Category filters
   catButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       catButtons.forEach(b => b.classList.remove('active'));
@@ -754,13 +908,14 @@
     });
   });
 
-  // Search
   const debouncedSearch = debounce(() => {
     searchQuery = searchInput.value.trim();
     if (searchQuery) {
       catButtons.forEach(b => b.classList.remove('active'));
       document.querySelector('[data-category="all"]').classList.add('active');
       activeCategory = 'all';
+      filterDate = null; // clear date filter on text search
+      if (heatmapClearBtn) heatmapClearBtn.style.display = 'none';
     }
     fetchMemories();
   }, 300);
@@ -785,6 +940,8 @@
       searchClear.classList.remove('visible');
       if (searchKbd) searchKbd.style.display = '';
       filterTag = null;
+      filterDate = null;
+      if (heatmapClearBtn) heatmapClearBtn.style.display = 'none';
       fetchMemories(); searchInput.focus();
     });
   }
@@ -807,7 +964,6 @@
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); searchInput.select(); return; }
     if (isTyping) return;
 
-    // Handle view modal specific shortcuts first
     if (viewOverlay.classList.contains('active')) {
       if ((e.key === 'e' || e.key === 'E') && currentViewMemory) {
         e.preventDefault();
@@ -825,7 +981,6 @@
         return;
       }
     }
-
     if (isAnyModalOpen()) return;
 
     if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openCreateModal(); return; }
@@ -863,5 +1018,6 @@
   });
 
   // --- Init ---
+  initTheme();
   initParticles();
 })();
