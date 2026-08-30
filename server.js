@@ -149,15 +149,20 @@ app.get('/api/memories', (req, res) => {
     case 'edited':
       memories.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
       break;
-    default: // newest — pinned float to top
+    default: // newest
       memories.sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1;
-        if (!a.pinned && b.pinned) return 1;
         const ao = a.sortOrder ?? new Date(a.createdAt).getTime();
         const bo = b.sortOrder ?? new Date(b.createdAt).getTime();
         return bo - ao;
       });
   }
+
+  // Always float pinned memories to the very top, regardless of sort mode
+  memories.sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return 0;
+  });
 
   const pageNum = Math.max(1, parseInt(page) || 1);
   const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 12));
@@ -206,6 +211,13 @@ app.get('/api/memories/search', (req, res) => {
     case 'edited': memories.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)); break;
     default: memories.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
+
+  // Always float pinned memories to the top
+  memories.sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return 0;
+  });
 
   const pageNum = Math.max(1, parseInt(page) || 1);
   const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 12));
