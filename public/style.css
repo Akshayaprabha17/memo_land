@@ -922,6 +922,56 @@ body::before {
   }
 }
 
+/* --- Undo Toast --- */
+.toast-undo {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding-bottom: 0;
+  min-width: 280px;
+  position: relative;
+  overflow: hidden;
+}
+
+.toast-undo-msg {
+  flex: 1;
+}
+
+.toast-undo-btn {
+  background: var(--accent-violet-soft);
+  border: 1px solid var(--accent-violet);
+  color: var(--accent-violet);
+  border-radius: var(--radius-full);
+  padding: 3px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  font-family: var(--font-body);
+  flex-shrink: 0;
+}
+
+.toast-undo-btn:hover {
+  background: var(--accent-violet);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.toast-progress {
+  width: 100%;
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  margin: 6px -20px -0px -20px;
+  overflow: hidden;
+}
+
+.toast-progress-bar {
+  width: 100%;
+  height: 100%;
+  background: var(--accent-sky);
+  border-radius: inherit;
+}
+
 /* --- Confirm Dialog --- */
 .confirm-overlay {
   position: fixed;

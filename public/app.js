@@ -385,13 +385,88 @@
     } catch (err) { showToast(err.message, 'error'); return null; }
   }
 
+  // pending delete timer — keyed by memory id
+  const pendingDeletes = {};
+
   async function deleteMemory(id) {
-    try {
-      const res = await fetch(`/api/memories/${id}`, { method: 'DELETE' });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Delete failed'); }
-      showToast('Memory erased 🗑️', 'info');
-      fetchMemories();
-    } catch (err) { showToast(err.message, 'error'); }
+    // Optimistically remove from local state and re-render
+    const memoryToDelete = allMemories.find(m => m.id === id);
+    if (!memoryToDelete) return;
+    allMemories = allMemories.filter(m => m.id !== id);
+    totalCount = Math.max(0, totalCount - 1);
+    render();
+    updateResultsInfo();
+
+    // Show undo toast — actual DELETE fires after 5s
+    showUndoToast('Memory deleted', async () => {
+      // UNDO: restore and re-fetch
+      clearTimeout(pendingDeletes[id]);
+      delete pendingDeletes[id];
+      allMemories = [memoryToDelete, ...allMemories];
+      totalCount += 1;
+      render();
+      updateResultsInfo();
+    }, async () => {
+      // COMMIT: actually delete
+      try {
+        const res = await fetch(`/api/memories/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          // If server delete fails, silently restore
+          const e = await res.json();
+          allMemories = [memoryToDelete, ...allMemories];
+          totalCount += 1;
+          render();
+          showToast(e.error || 'Delete failed', 'error');
+        }
+      } catch (err) {
+        allMemories = [memoryToDelete, ...allMemories];
+        totalCount += 1;
+        render();
+        showToast('Delete failed', 'error');
+      }
+    });
+  }
+
+  function showUndoToast(message, onUndo, onCommit, duration = 5000) {
+    const toast = document.createElement('div');
+    toast.className = 'toast info toast-undo';
+    toast.innerHTML = `
+      <span class="toast-icon">🗑️</span>
+      <span class="toast-undo-msg">${escapeHtml(message)}</span>
+      <button class="toast-undo-btn">Undo</button>
+      <div class="toast-progress"><div class="toast-progress-bar"></div></div>
+    `;
+    toastContainer.appendChild(toast);
+
+    // Animate the progress bar shrinking
+    const bar = toast.querySelector('.toast-progress-bar');
+    bar.style.transition = `width ${duration}ms linear`;
+    // Trigger reflow then animate
+    void bar.offsetWidth;
+    bar.style.width = '0%';
+
+    let undone = false;
+    const undoBtn = toast.querySelector('.toast-undo-btn');
+
+    function dismiss() {
+      toast.classList.add('toast-out');
+      toast.addEventListener('animationend', () => toast.remove(), { once: true });
+    }
+
+    undoBtn.addEventListener('click', () => {
+      if (undone) return;
+      undone = true;
+      clearTimeout(commitTimer);
+      onUndo();
+      dismiss();
+      showToast('Restored ↩️', 'success');
+    });
+
+    const commitTimer = setTimeout(() => {
+      if (undone) return;
+      dismiss();
+      onCommit();
+    }, duration);
   }
 
   async function togglePin(id) {
