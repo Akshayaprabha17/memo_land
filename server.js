@@ -247,6 +247,68 @@ app.get('/api/tags', (req, res) => {
   res.json(tags);
 });
 
+// GET stats summary
+app.get('/api/stats', (req, res) => {
+  const memories = readMemories();
+  const total = memories.length;
+
+  // Category breakdown
+  const categories = {};
+  memories.forEach(m => {
+    categories[m.category] = (categories[m.category] || 0) + 1;
+  });
+
+  // Locked / pinned
+  const locked = memories.filter(m => m.locked).length;
+  const pinned = memories.filter(m => m.pinned).length;
+
+  // Average content length (unlocked only, chars)
+  const unlocked = memories.filter(m => !m.locked);
+  const avgLength = unlocked.length
+    ? Math.round(unlocked.reduce((sum, m) => sum + (m.content || '').length, 0) / unlocked.length)
+    : 0;
+
+  // This week count
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const thisWeek = memories.filter(m => new Date(m.createdAt) >= weekAgo).length;
+
+  // Top 5 tags
+  const tagMap = {};
+  memories.forEach(m => {
+    (m.tags || []).forEach(t => { tagMap[t] = (tagMap[t] || 0) + 1; });
+  });
+  const topTags = Object.entries(tagMap)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // Most active day (most memories created on a single date)
+  const dayCounts = {};
+  memories.forEach(m => {
+    const d = m.createdAt.split('T')[0];
+    dayCounts[d] = (dayCounts[d] || 0) + 1;
+  });
+  const mostActiveDay = Object.entries(dayCounts)
+    .sort((a, b) => b[1] - a[1])[0] || null;
+
+  // Longest memory title
+  const longestTitle = memories.reduce((best, m) =>
+    m.title.length > (best ? best.title.length : 0) ? m : best, null);
+
+  res.json({
+    total,
+    categories,
+    locked,
+    pinned,
+    avgLength,
+    thisWeek,
+    topTags,
+    mostActiveDay: mostActiveDay ? { date: mostActiveDay[0], count: mostActiveDay[1] } : null,
+    longestTitle: longestTitle ? longestTitle.title : null
+  });
+});
+
 // GET heatmap data (counts per day)
 app.get('/api/heatmap', (req, res) => {
   const memories = readMemories();

@@ -146,6 +146,13 @@
           <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
         </svg>
       </button>
+      <button class="theme-toggle" id="stats-btn" aria-label="View stats dashboard" title="Stats">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+      </button>
       <div class="search-wrapper" id="search-wrapper">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
@@ -426,6 +433,61 @@
 
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
+
+  <!-- Stats Panel -->
+  <div id="stats-panel" class="stats-panel">
+    <div class="stats-panel-header">
+      <div class="stats-panel-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <h2>Stats Dashboard</h2>
+      </div>
+      <button class="modal-close" id="stats-close" aria-label="Close stats">&times;</button>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="stats-cards" id="stats-cards">
+      <div class="stat-card" id="stat-total">
+        <div class="stat-value">—</div>
+        <div class="stat-label">Total Memories</div>
+      </div>
+      <div class="stat-card" id="stat-week">
+        <div class="stat-value">—</div>
+        <div class="stat-label">Added This Week</div>
+      </div>
+      <div class="stat-card" id="stat-locked">
+        <div class="stat-value">—</div>
+        <div class="stat-label">Locked</div>
+      </div>
+      <div class="stat-card" id="stat-avg">
+        <div class="stat-value">—</div>
+        <div class="stat-label">Avg Length (chars)</div>
+      </div>
+    </div>
+
+    <!-- Category Bar Chart -->
+    <div class="stats-section">
+      <h3 class="stats-section-title">By Category</h3>
+      <div id="stats-category-bars" class="category-bars"></div>
+    </div>
+
+    <!-- Top Tags -->
+    <div class="stats-section" id="stats-tags-section">
+      <h3 class="stats-section-title">Top Tags</h3>
+      <div id="stats-top-tags" class="stats-top-tags"></div>
+    </div>
+
+    <!-- Fun Facts -->
+    <div class="stats-section" id="stats-facts-section">
+      <h3 class="stats-section-title">Fun Facts</h3>
+      <div id="stats-facts" class="stats-facts"></div>
+    </div>
+  </div>
+  <!-- Stats Backdrop -->
+  <div id="stats-backdrop" class="stats-backdrop"></div>
 
   <script src="/app.js"></script>
 </body>

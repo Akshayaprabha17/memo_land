@@ -1187,4 +1187,145 @@
   // --- Init ---
   initTheme();
   initParticles();
+
+  // --- Stats Dashboard ---
+  (function initStats() {
+    const statsBtn     = document.getElementById('stats-btn');
+    const statsPanel   = document.getElementById('stats-panel');
+    const statsClose   = document.getElementById('stats-close');
+    const statsBackdrop = document.getElementById('stats-backdrop');
+    if (!statsBtn || !statsPanel) return;
+
+    const CAT_META = {
+      personal:  { label: 'Personal',  emoji: '💜', color: '#a78bfa' },
+      work:      { label: 'Work',       emoji: '💼', color: '#38bdf8' },
+      ideas:     { label: 'Ideas',      emoji: '💡', color: '#fbbf24' },
+      secrets:   { label: 'Secrets',    emoji: '🤫', color: '#f472b6' },
+      important: { label: 'Important',  emoji: '⭐', color: '#fb923c' }
+    };
+
+    function openStats() {
+      statsPanel.classList.add('open');
+      statsBackdrop.classList.add('open');
+      loadStats();
+    }
+    function closeStats() {
+      statsPanel.classList.remove('open');
+      statsBackdrop.classList.remove('open');
+    }
+
+    statsBtn.addEventListener('click', openStats);
+    statsClose.addEventListener('click', closeStats);
+    statsBackdrop.addEventListener('click', closeStats);
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const s = await res.json();
+        renderStats(s);
+      } catch (e) {
+        showToast('Could not load stats', 'error');
+      }
+    }
+
+    function animateValue(el, target) {
+      // Count-up animation
+      const duration = 600;
+      const start = Date.now();
+      const from = 0;
+      function tick() {
+        const elapsed = Date.now() - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        el.textContent = Math.round(from + (target - from) * ease);
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function renderStats(s) {
+      // Summary cards
+      const cardTotal  = document.querySelector('#stat-total .stat-value');
+      const cardWeek   = document.querySelector('#stat-week .stat-value');
+      const cardLocked = document.querySelector('#stat-locked .stat-value');
+      const cardAvg    = document.querySelector('#stat-avg .stat-value');
+
+      if (cardTotal)  animateValue(cardTotal, s.total);
+      if (cardWeek)   animateValue(cardWeek, s.thisWeek);
+      if (cardLocked) animateValue(cardLocked, s.locked);
+      if (cardAvg)    animateValue(cardAvg, s.avgLength);
+
+      // Category bar chart
+      const barsEl = document.getElementById('stats-category-bars');
+      if (barsEl) {
+        const maxCount = Math.max(1, ...Object.values(s.categories));
+        const allCats = ['personal', 'work', 'ideas', 'secrets', 'important'];
+        barsEl.innerHTML = allCats.map(cat => {
+          const count = s.categories[cat] || 0;
+          const pct = Math.round((count / maxCount) * 100);
+          const meta = CAT_META[cat] || { label: cat, emoji: '📝', color: '#94a3b8' };
+          return `
+            <div class="cat-bar-row">
+              <div class="cat-bar-label">
+                <span>${meta.emoji}</span>
+                <span>${meta.label}</span>
+              </div>
+              <div class="cat-bar-track">
+                <div class="cat-bar-fill" style="width:0%; background:${meta.color};" data-pct="${pct}"></div>
+              </div>
+              <div class="cat-bar-count">${count}</div>
+            </div>`;
+        }).join('');
+
+        // Animate bars in after paint
+        requestAnimationFrame(() => {
+          barsEl.querySelectorAll('.cat-bar-fill').forEach(bar => {
+            requestAnimationFrame(() => { bar.style.width = bar.dataset.pct + '%'; });
+          });
+        });
+      }
+
+      // Top tags
+      const tagsEl = document.getElementById('stats-top-tags');
+      const tagsSection = document.getElementById('stats-tags-section');
+      if (tagsEl) {
+        if (s.topTags && s.topTags.length) {
+          tagsSection.style.display = '';
+          const maxTag = s.topTags[0]?.count || 1;
+          tagsEl.innerHTML = s.topTags.map(t => `
+            <div class="stats-tag-row">
+              <span class="tag-chip">#${escapeHtml(t.name)}<span class="tag-count">${t.count}</span></span>
+              <div class="tag-bar-track">
+                <div class="tag-bar-fill" style="width:${Math.round(t.count / maxTag * 100)}%"></div>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          tagsSection.style.display = 'none';
+        }
+      }
+
+      // Fun facts
+      const factsEl = document.getElementById('stats-facts');
+      if (factsEl) {
+        const facts = [];
+        if (s.mostActiveDay) {
+          const d = new Date(s.mostActiveDay.date + 'T12:00:00');
+          const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          facts.push(`🏆 Most active day: <strong>${label}</strong> (${s.mostActiveDay.count} memories)`);
+        }
+        if (s.pinned > 0) {
+          facts.push(`📌 <strong>${s.pinned}</strong> pinned memor${s.pinned === 1 ? 'y' : 'ies'}`);
+        }
+        if (s.longestTitle) {
+          facts.push(`📝 Longest title: <em>"${escapeHtml(s.longestTitle)}"</em>`);
+        }
+        if (s.total === 0) {
+          facts.push('✨ Your vault is empty — add your first memory!');
+        }
+        factsEl.innerHTML = facts.map(f => `<div class="stats-fact">${f}</div>`).join('');
+      }
+    }
+  })();
+
 })();
