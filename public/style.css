@@ -2240,10 +2240,16 @@ body.light-theme .heatmap-cell.lvl-4 { background-color: rgb(99,102,241); }
 }
 
 /* --- Markdown Styling --- */
+.content-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .content-tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 8px;
 }
 .content-tab {
   background: transparent;
@@ -2333,4 +2339,85 @@ body.light-theme .heatmap-cell.lvl-4 { background-color: rgb(99,102,241); }
 }
 .view-content.markdown-body {
   margin-top: var(--space-md);
+}
+
+/* ============================================
+   VOICE-TO-TEXT MIC BUTTON
+   ============================================ */
+.mic-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.mic-btn svg {
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.mic-btn:hover {
+  border-color: var(--accent-rose);
+  color: var(--accent-rose);
+  background: rgba(244, 63, 94, 0.08);
+}
+
+/* Active / recording state */
+.mic-btn.mic-active {
+  border-color: var(--accent-rose);
+  color: var(--accent-rose);
+  background: rgba(244, 63, 94, 0.12);
+  animation: micPulseRing 1.2s ease-out infinite;
+}
+
+@keyframes micPulseRing {
+  0%   { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(244, 63, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+}
+
+/* Listening badge */
+.mic-listening-badge {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  color: var(--accent-rose);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.mic-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-rose);
+  animation: micDotPulse 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes micDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+.content-body {
+  position: relative;
 }

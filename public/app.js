@@ -748,6 +748,98 @@
   if (tabWrite) tabWrite.addEventListener('click', () => setTab(true));
   if (tabPreview) tabPreview.addEventListener('click', () => setTab(false));
 
+  // --- Voice-to-Text (SpeechRecognition) ---
+  (function initVoiceInput() {
+    const micBtn = document.getElementById('mic-btn');
+    const micIconDefault = document.getElementById('mic-icon-default');
+    const micIconStop = document.getElementById('mic-icon-stop');
+    const micBadge = document.getElementById('mic-listening-badge');
+
+    if (!micBtn) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      // Browser doesn't support it — dim the button and add a tooltip
+      micBtn.disabled = true;
+      micBtn.title = 'Voice input is not supported in this browser. Try Chrome or Edge.';
+      micBtn.style.opacity = '0.4';
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;       // keep listening until stopped
+    recognition.interimResults = true;   // show partial results live
+    recognition.lang = 'en-US';
+
+    let isListening = false;
+    let interimSpan = null; // tracks the live "in-progress" text node
+
+    function setListening(active) {
+      isListening = active;
+      micBtn.classList.toggle('mic-active', active);
+      micIconDefault.style.display = active ? 'none' : '';
+      micIconStop.style.display = active ? '' : 'none';
+      micBadge.style.display = active ? 'flex' : 'none';
+    }
+
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => {
+      setListening(false);
+      interimSpan = null;
+    };
+    recognition.onerror = (e) => {
+      setListening(false);
+      interimSpan = null;
+      if (e.error !== 'aborted') {
+        showToast(`Mic error: ${e.error}`, 'error');
+      }
+    };
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      let finalText = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += transcript + ' ';
+        } else {
+          interim += transcript;
+        }
+      }
+
+      if (finalText) {
+        // Append committed text to the textarea
+        const current = contentInput.value;
+        const spacer = current && !current.endsWith(' ') && !current.endsWith('\n') ? ' ' : '';
+        contentInput.value = current + spacer + finalText.trim() + ' ';
+        // Update char count
+        charCount.textContent = `${contentInput.value.length} / 2000`;
+        // Switch to Write tab to show result
+        setTab(true);
+      }
+
+      // Show interim text as a placeholder in the badge
+      if (interim) {
+        micBadge.innerHTML = `<span class="mic-pulse"></span> <em>${interim}</em>`;
+      } else {
+        micBadge.innerHTML = `<span class="mic-pulse"></span> Listening…`;
+      }
+    };
+
+    micBtn.addEventListener('click', () => {
+      if (isListening) {
+        recognition.stop();
+      } else {
+        // Make sure we're on the Write tab
+        setTab(true);
+        contentInput.focus();
+        recognition.start();
+      }
+    });
+  })();
+
   // --- Modals ---
   function openCreateModal() {
     modalTitle.textContent = 'New Memory';
