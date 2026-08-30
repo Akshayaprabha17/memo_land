@@ -351,6 +351,18 @@
           </div>
           <p class="form-hint">Max 10 tags · letters, numbers, hyphens</p>
         </div>
+        <div class="form-group">
+          <label>Attach Image <span class="form-optional">optional</span></label>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="btn btn-secondary" id="btn-upload-image" style="padding: 8px 16px;">🖼️ Choose Image</button>
+            <input type="file" id="memory-image-input" accept="image/*" style="display:none;" />
+            <span id="upload-image-filename" style="font-size: 0.8rem; color: var(--text-muted);">No image selected</span>
+          </div>
+          <div id="image-preview-container" style="display:none; position:relative; margin-top:10px; max-width: 100%;">
+            <img id="image-preview" src="" style="max-height:150px; border-radius:8px; display:block;" />
+            <button type="button" id="btn-remove-image" class="btn btn-danger" style="position:absolute; top:5px; left:5px; padding: 2px 8px; font-size: 0.8rem;">Remove</button>
+          </div>
+        </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" id="btn-cancel">Cancel</button>
           <button type="submit" class="btn btn-primary" id="btn-save">
@@ -373,6 +385,9 @@
         <button class="modal-close" id="view-modal-close" aria-label="Close">&times;</button>
       </div>
       <div class="view-modal-body">
+        <div class="view-image-container" id="view-image-container" style="display:none; margin-bottom: 15px;">
+          <img id="view-image" src="" style="width:100%; max-height:250px; object-fit:cover; border-radius:8px;" />
+        </div>
         <div class="view-category" id="view-category"></div>
         <div class="view-tags" id="view-tags"></div>
         <div class="view-content" id="view-content"></div>
@@ -382,6 +397,10 @@
         <button class="btn btn-secondary btn-icon" id="view-edit-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           Edit
+        </button>
+        <button class="btn btn-secondary btn-icon" id="view-share-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+          Share Link
         </button>
         <button class="btn btn-danger btn-icon" id="view-delete-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>

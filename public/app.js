@@ -22,6 +22,7 @@
   let currentViewMemory = null;
   let actionTargetMemoryId = null;
   let isPermanentUnlock = false;
+  let currentImageBase64 = null; // base64 string of attached image
 
   const PAGE_LIMIT = 12;
 
@@ -72,6 +73,12 @@
   const modalClose = document.getElementById('modal-close');
   const formTagPills = document.getElementById('form-tag-pills');
   const tagTextInput = document.getElementById('tag-text-input');
+  const memoryImageInput = document.getElementById('memory-image-input');
+  const btnUploadImage = document.getElementById('btn-upload-image');
+  const uploadImageFilename = document.getElementById('upload-image-filename');
+  const imagePreviewContainer = document.getElementById('image-preview-container');
+  const imagePreview = document.getElementById('image-preview');
+  const btnRemoveImage = document.getElementById('btn-remove-image');
 
   // View Modal
   const viewOverlay = document.getElementById('view-modal-overlay');
@@ -80,9 +87,12 @@
   const viewTagsEl = document.getElementById('view-tags');
   const viewContent = document.getElementById('view-content');
   const viewMeta = document.getElementById('view-meta');
+  const viewImageContainer = document.getElementById('view-image-container');
+  const viewImage = document.getElementById('view-image');
   const viewModalClose = document.getElementById('view-modal-close');
   const viewEditBtn = document.getElementById('view-edit-btn');
   const viewDeleteBtn = document.getElementById('view-delete-btn');
+  const viewShareBtn = document.getElementById('view-share-btn');
 
   // Toast + PIN
   const toastContainer = document.getElementById('toast-container');
@@ -566,6 +576,10 @@
       ? `<div class="card-tags">${tags.slice(0,3).map(t => `<span class="tag-chip-sm" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</span>`).join('')}${tags.length > 3 ? `<span class="tag-more">+${tags.length - 3}</span>` : ''}</div>`
       : '';
 
+    const imageHTML = (m.image && !m.locked)
+      ? `<div class="card-media"><img src="${m.image}" alt="Memory image" /></div>`
+      : '';
+
     return `
       <article class="memory-card${m.pinned ? ' pinned-card' : ''}"
                data-category="${m.category}"
@@ -589,6 +603,7 @@
             </button>
           </div>
         </div>
+        ${imageHTML}
         <div class="card-content ${m.locked ? 'locked-content' : ''}">${contentDisplay}</div>
         ${cardTagsHTML}
         <div class="card-bottom">
@@ -852,6 +867,14 @@
     renderFormTags();
     if (tagTextInput) tagTextInput.value = '';
     setTab(true);
+
+    // Reset image attachment
+    currentImageBase64 = null;
+    imagePreview.src = '';
+    imagePreviewContainer.style.display = 'none';
+    uploadImageFilename.textContent = 'No image selected';
+    memoryImageInput.value = '';
+
     modalOverlay.classList.add('active');
     titleInput.focus();
   }
@@ -867,6 +890,21 @@
     renderFormTags();
     if (tagTextInput) tagTextInput.value = '';
     setTab(true);
+
+    // Populate image attachment if it exists
+    if (memory.image) {
+      currentImageBase64 = memory.image;
+      imagePreview.src = memory.image;
+      imagePreviewContainer.style.display = 'block';
+      uploadImageFilename.textContent = 'Image attached';
+    } else {
+      currentImageBase64 = null;
+      imagePreview.src = '';
+      imagePreviewContainer.style.display = 'none';
+      uploadImageFilename.textContent = 'No image selected';
+    }
+    memoryImageInput.value = '';
+
     modalOverlay.classList.add('active');
     titleInput.focus();
   }
@@ -891,6 +929,15 @@
         });
       });
     }
+
+    // Set view modal image
+    if (memory.image && !memory.locked) {
+      viewImageContainer.style.display = 'block';
+      viewImage.src = memory.image;
+    } else {
+      viewImageContainer.style.display = 'none';
+      viewImage.src = '';
+    }
     
     // Render Markdown in View Modal
     viewContent.innerHTML = renderMarkdown(memory.content);
@@ -900,7 +947,12 @@
     viewOverlay.classList.add('active');
   }
 
-  function closeViewModal() { viewOverlay.classList.remove('active'); currentViewMemory = null; }
+  function closeViewModal() {
+    viewOverlay.classList.remove('active');
+    currentViewMemory = null;
+    viewImage.src = '';
+    viewImageContainer.style.display = 'none';
+  }
 
   function isAnyModalOpen() {
     return modalOverlay.classList.contains('active') ||
@@ -1015,7 +1067,8 @@
       title: titleInput.value,
       content: contentInput.value,
       category: categoryInput.value,
-      tags: formTags
+      tags: formTags,
+      image: currentImageBase64
     };
     const editId = memoryIdInput.value;
     if (editId) {
@@ -1026,6 +1079,40 @@
     }
     closeFormModal();
   });
+
+  // Image Upload Listeners
+  if (btnUploadImage) {
+    btnUploadImage.addEventListener('click', () => memoryImageInput.click());
+  }
+
+  if (memoryImageInput) {
+    memoryImageInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        currentImageBase64 = reader.result;
+        imagePreview.src = currentImageBase64;
+        imagePreviewContainer.style.display = 'block';
+        uploadImageFilename.textContent = file.name;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (btnRemoveImage) {
+    btnRemoveImage.addEventListener('click', () => {
+      currentImageBase64 = null;
+      imagePreview.src = '';
+      imagePreviewContainer.style.display = 'none';
+      uploadImageFilename.textContent = 'No image selected';
+      memoryImageInput.value = '';
+    });
+  }
 
   contentInput.addEventListener('input', () => { charCount.textContent = `${contentInput.value.length} / 2000`; });
   btnCancel.addEventListener('click', closeFormModal);
@@ -1048,6 +1135,28 @@
     const confirmed = await showConfirm('Delete Memory?', 'This cannot be undone.');
     if (confirmed) { closeViewModal(); deleteMemory(memId); }
   });
+
+  if (viewShareBtn) {
+    viewShareBtn.addEventListener('click', async () => {
+      if (!currentViewMemory) return;
+      try {
+        const res = await fetch(`/api/memories/${currentViewMemory.id}/share`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hours: 24 })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to generate share link');
+        }
+        const data = await res.json();
+        await navigator.clipboard.writeText(data.shareUrl);
+        showToast('Share link copied to clipboard! 📋', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
 
   if (sortSelect) {
     sortSelect.addEventListener('change', () => {
