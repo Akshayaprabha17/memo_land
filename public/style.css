@@ -1062,7 +1062,7 @@ body::before {
 
 .app-wrapper.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
 }
 
 /* Landing page container */
@@ -1199,23 +1199,6 @@ body::before {
   object-fit: cover;
   border-radius: 24px;
   filter: drop-shadow(0 0 30px rgba(124, 58, 237, 0.35));
-}
-
-.lock-ring-outer {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  border: 1px dashed rgba(245, 158, 11, 0.25);
-  animation: lockRingOuterSpin 20s linear infinite reverse;
-}
-
-@keyframes lockRingOuterSpin {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 .lock-ring {
