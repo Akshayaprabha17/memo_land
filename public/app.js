@@ -273,22 +273,7 @@
 
   function renderTagFilterBar(tags) {
     if (!tagFilterBar || !tagFilterChips) return;
-    if (!tags.length) { tagFilterBar.style.display = 'none'; return; }
-    tagFilterBar.style.display = 'flex';
-    tagClearBtn.style.display = filterTag ? '' : 'none';
-
-    tagFilterChips.innerHTML = tags.map(t => `
-      <button class="tag-chip${filterTag === t.name ? ' active' : ''}" data-tag="${escapeHtml(t.name)}">
-        #${escapeHtml(t.name)} <span class="tag-count">${t.count}</span>
-      </button>
-    `).join('');
-
-    tagFilterChips.querySelectorAll('.tag-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        filterTag = filterTag === chip.dataset.tag ? null : chip.dataset.tag;
-        fetchMemories();
-      });
-    });
+    tagFilterBar.style.display = 'none';
   }
 
   // --- Heatmap API ---
@@ -1178,6 +1163,7 @@
       activeCategory = btn.dataset.category;
       searchInput.value = '';
       searchQuery = '';
+      filterTag = null; // Reset tag filter on category change
       searchClear.classList.remove('visible');
       if (searchKbd) searchKbd.style.display = '';
       fetchMemories();

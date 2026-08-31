@@ -53,8 +53,8 @@
   --radius-full: 9999px;
 
   /* Fonts */
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Outfit', 'Inter', sans-serif;
+  --font-body: 'JetBrains Mono', monospace;
+  --font-display: 'JetBrains Mono', monospace;
 
   /* Transitions */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -1201,6 +1201,23 @@ body::before {
   filter: drop-shadow(0 0 30px rgba(124, 58, 237, 0.35));
 }
 
+.lock-ring-outer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  border: 1px dashed rgba(245, 158, 11, 0.25);
+  animation: lockRingOuterSpin 20s linear infinite reverse;
+}
+
+@keyframes lockRingOuterSpin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
 .lock-ring {
   position: absolute;
   top: 50%;
@@ -1363,8 +1380,26 @@ body::before {
 
 .feature-card:hover {
   transform: translateY(-6px);
-  border-color: var(--border-glass-hover);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+}
+
+#feature-organize:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 16px 48px rgba(124, 58, 237, 0.15);
+}
+
+#feature-lock:hover {
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: 0 16px 48px rgba(245, 158, 11, 0.15);
+}
+
+#feature-search:hover {
+  border-color: rgba(14, 165, 233, 0.4);
+  box-shadow: 0 16px 48px rgba(14, 165, 233, 0.15);
+}
+
+#feature-beautiful:hover {
+  border-color: rgba(244, 63, 94, 0.4);
+  box-shadow: 0 16px 48px rgba(244, 63, 94, 0.15);
 }
 
 .feature-icon {
