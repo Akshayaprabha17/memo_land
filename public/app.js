@@ -1393,6 +1393,63 @@
     landingNav.classList.toggle('scrolled', window.scrollY > 60);
   });
 
+  // --- Particle Canvas Engine ---
+  function initParticles() {
+    const canvas = document.getElementById('particles-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const particles = [];
+    const count = Math.min(Math.floor((width * height) / 18000), 50);
+
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 1.4 + 0.6,
+        alpha: Math.random() * 0.35 + 0.1,
+        speedX: (Math.random() - 0.5) * 0.25,
+        speedY: (Math.random() - 0.5) * 0.25,
+        pulseSpeed: Math.random() * 0.02 + 0.005,
+        pulseAngle: Math.random() * Math.PI * 2
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+
+      particles.forEach(p => {
+        p.x += p.speedX;
+        p.y += p.speedY;
+
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+        if (p.y < 0) p.y = height;
+        if (p.y > height) p.y = 0;
+
+        p.pulseAngle += p.pulseSpeed;
+        const currentAlpha = p.alpha + Math.sin(p.pulseAngle) * 0.12;
+        const clampedAlpha = Math.max(0.05, Math.min(0.55, currentAlpha));
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(167, 139, 250, ${clampedAlpha})`;
+        ctx.fill();
+      });
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  }
+
   // --- Init ---
   initTheme();
   initParticles();
