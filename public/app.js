@@ -1361,6 +1361,22 @@
     }, 700);
   }
 
+  function exitVaultToLanding() {
+    if (appWrapper) {
+      appWrapper.classList.remove('visible');
+      appWrapper.classList.add('hidden');
+    }
+    if (landingPage) {
+      landingPage.style.display = 'block';
+      landingPage.classList.remove('leaving');
+    }
+    if (landingNav) {
+      landingNav.style.display = 'flex';
+      landingNav.classList.remove('scrolled');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function handleLandingCtaClick() {
     if (currentUser) {
       enterVault();
@@ -1706,6 +1722,8 @@
         const login = loginInput.value.trim();
         const password = loginPassword.value;
 
+        if (loginPassword) loginPassword.classList.remove('input-error');
+
         try {
           const res = await fetch('/api/auth/login', {
             method: 'POST',
@@ -1713,11 +1731,21 @@
             body: JSON.stringify({ login, password })
           });
           const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Login failed.');
+          if (!res.ok) {
+            if (loginPassword) {
+              loginPassword.classList.add('input-error');
+              loginPassword.focus();
+            }
+            throw new Error(data.error || 'Incorrect password. Please try again.');
+          }
 
           currentUser = data.user;
           updateAuthUI();
           closeAuthModal();
+
+          if (loginInput) loginInput.value = '';
+          if (loginPassword) { loginPassword.value = ''; loginPassword.classList.remove('input-error'); }
+
           showToast(`Signed in as @${currentUser.username} 👋`, 'success');
           refreshAllVaultData();
           enterVault();
@@ -1734,8 +1762,22 @@
         currentUser = null;
         updateAuthUI();
         closeProfileModal();
+        closeAuthModal();
+
+        // Clear input fields
+        if (loginInput) loginInput.value = '';
+        if (loginPassword) { loginPassword.value = ''; loginPassword.classList.remove('input-error'); }
+        if (registerUsername) registerUsername.value = '';
+        if (registerEmail) registerEmail.value = '';
+        if (registerPassword) registerPassword.value = '';
+
+        // Reset memory data grid so past login info is wiped
+        allMemories = [];
+        totalCount = 0;
+        render();
+
         showToast('Logged out successfully', 'info');
-        refreshAllVaultData();
+        exitVaultToLanding();
       } catch (err) {
         showToast('Logout failed', 'error');
       }

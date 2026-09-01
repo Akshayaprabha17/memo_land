@@ -143,8 +143,7 @@ function resolveUser(req, res, next) {
   }
 
   req.sessionUser = sessionUser;
-  // Fallback to demo user if unauthenticated for seamless data reading
-  req.currentUser = sessionUser || users.find(u => u.id === DEFAULT_DEMO_USER_ID) || users[0];
+  req.currentUser = sessionUser;
   next();
 }
 
@@ -209,7 +208,7 @@ app.post('/api/auth/register', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   const { login, password } = req.body;
   if (!login || !password) {
-    return res.status(400).json({ error: 'Username/email and password are required.' });
+    return res.status(400).json({ error: 'Please enter your username/email and password.' });
   }
 
   const users = readUsers();
@@ -217,12 +216,12 @@ app.post('/api/auth/login', (req, res) => {
   const user = users.find(u => u.username.toLowerCase() === cleanLogin || u.email.toLowerCase() === cleanLogin);
 
   if (!user) {
-    return res.status(401).json({ error: 'Invalid username/email or password.' });
+    return res.status(401).json({ error: 'Incorrect username/email or password. Please try again.' });
   }
 
   const hash = hashPassword(password, user.salt);
   if (hash !== user.passwordHash) {
-    return res.status(401).json({ error: 'Invalid username/email or password.' });
+    return res.status(401).json({ error: 'Incorrect password. Please try again.' });
   }
 
   // Create session
@@ -348,6 +347,9 @@ app.post('/api/memories/:id/verify', (req, res) => {
 
 // GET all memories — supports ?page, ?limit, ?sort, ?category, ?tag, ?date
 app.get('/api/memories', (req, res) => {
+  if (!req.currentUser) {
+    return res.json({ data: [], total: 0, page: 1, limit: 12, hasMore: false });
+  }
   let memories = readMemories().filter(m => m.userId === req.currentUser.id);
   const { category, tag, date, sort = 'newest', page = 1, limit = 12 } = req.query;
 
@@ -407,6 +409,9 @@ app.get('/api/memories', (req, res) => {
 
 // GET search memories — supports ?q, ?tag, ?date, ?sort, ?page, ?limit
 app.get('/api/memories/search', (req, res) => {
+  if (!req.currentUser) {
+    return res.json({ data: [], total: 0, page: 1, limit: 12, hasMore: false });
+  }
   const { q, tag, date, sort = 'newest', page = 1, limit = 12 } = req.query;
   if (!q && !date) return res.json({ data: [], total: 0, page: 1, limit: 12, hasMore: false });
 
@@ -462,6 +467,7 @@ app.get('/api/memories/search', (req, res) => {
 
 // GET all unique tags with usage counts
 app.get('/api/tags', (req, res) => {
+  if (!req.currentUser) return res.json([]);
   const memories = readMemories().filter(m => m.userId === req.currentUser.id);
   const tagMap = {};
   memories.forEach(m => {
@@ -475,6 +481,9 @@ app.get('/api/tags', (req, res) => {
 
 // GET stats summary
 app.get('/api/stats', (req, res) => {
+  if (!req.currentUser) {
+    return res.json({ total: 0, thisWeek: 0, locked: 0, avgLength: 0, categories: {}, topTags: [], pinned: 0 });
+  }
   const memories = readMemories().filter(m => m.userId === req.currentUser.id);
   const total = memories.length;
 
@@ -516,7 +525,8 @@ app.get('/api/stats', (req, res) => {
     dayCounts[d] = (dayCounts[d] || 0) + 1;
   });
   const mostActiveDay = Object.entries(dayCounts)
-    .sort((a, b) => b[1] - a[1])[0] || null;
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => b.count - a.count)[0] || null;
 
   // Longest memory title
   const longestTitle = memories.reduce((best, m) =>
@@ -530,13 +540,14 @@ app.get('/api/stats', (req, res) => {
     avgLength,
     thisWeek,
     topTags,
-    mostActiveDay: mostActiveDay ? { date: mostActiveDay[0], count: mostActiveDay[1] } : null,
+    mostActiveDay,
     longestTitle: longestTitle ? longestTitle.title : null
   });
 });
 
 // GET heatmap data (counts per day)
 app.get('/api/heatmap', (req, res) => {
+  if (!req.currentUser) return res.json({});
   const memories = readMemories().filter(m => m.userId === req.currentUser.id);
   const counts = {};
   memories.forEach(m => {
@@ -548,6 +559,7 @@ app.get('/api/heatmap', (req, res) => {
 
 // POST create a new memory
 app.post('/api/memories', (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: 'Unauthorized' });
   const { title, content, category, tags, image } = req.body;
   if (!title || !content) {
     return res.status(400).json({ error: 'Title and content are required.' });

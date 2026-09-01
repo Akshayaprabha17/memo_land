@@ -721,6 +721,19 @@ body::before {
   opacity: 0.7;
 }
 
+.input-error {
+  border-color: var(--accent-rose) !important;
+  background: rgba(244, 63, 94, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.25) !important;
+  animation: shakeInput 0.4s ease-in-out;
+}
+
+@keyframes shakeInput {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
 .form-group textarea {
   min-height: 120px;
 }
@@ -1363,10 +1376,14 @@ body::before {
   animation: featureReveal 0.7s var(--ease-out) both;
 }
 
-.feature-card:nth-child(1) { animation-delay: 0.1s; }
-.feature-card:nth-child(2) { animation-delay: 0.2s; }
-.feature-card:nth-child(3) { animation-delay: 0.3s; }
-.feature-card:nth-child(4) { animation-delay: 0.4s; }
+.feature-card:nth-child(1) { animation-delay: 0.05s; }
+.feature-card:nth-child(2) { animation-delay: 0.10s; }
+.feature-card:nth-child(3) { animation-delay: 0.15s; }
+.feature-card:nth-child(4) { animation-delay: 0.20s; }
+.feature-card:nth-child(5) { animation-delay: 0.25s; }
+.feature-card:nth-child(6) { animation-delay: 0.30s; }
+.feature-card:nth-child(7) { animation-delay: 0.35s; }
+.feature-card:nth-child(8) { animation-delay: 0.40s; }
 
 @keyframes featureReveal {
   from { opacity: 0; transform: translateY(30px); }
@@ -1375,6 +1392,31 @@ body::before {
 
 .feature-card:hover {
   transform: translateY(-6px);
+}
+
+#feature-auth:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 16px 48px rgba(124, 58, 237, 0.15);
+}
+
+#feature-heatmap:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 16px 48px rgba(16, 185, 129, 0.15);
+}
+
+#feature-voice:hover {
+  border-color: rgba(249, 115, 22, 0.4);
+  box-shadow: 0 16px 48px rgba(249, 115, 22, 0.15);
+}
+
+#feature-markdown:hover {
+  border-color: rgba(244, 63, 94, 0.4);
+  box-shadow: 0 16px 48px rgba(244, 63, 94, 0.15);
+}
+
+#feature-stats:hover {
+  border-color: rgba(14, 165, 233, 0.4);
+  box-shadow: 0 16px 48px rgba(14, 165, 233, 0.15);
 }
 
 #feature-organize:hover {
@@ -1390,11 +1432,6 @@ body::before {
 #feature-search:hover {
   border-color: rgba(14, 165, 233, 0.4);
   box-shadow: 0 16px 48px rgba(14, 165, 233, 0.15);
-}
-
-#feature-beautiful:hover {
-  border-color: rgba(244, 63, 94, 0.4);
-  box-shadow: 0 16px 48px rgba(244, 63, 94, 0.15);
 }
 
 .feature-icon {
@@ -1430,6 +1467,16 @@ body::before {
 .feature-icon-rose {
   background: rgba(244, 63, 94, 0.12);
   color: var(--accent-rose);
+}
+
+.feature-icon-emerald {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-emerald);
+}
+
+.feature-icon-orange {
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--accent-orange);
 }
 
 .feature-card h3 {
