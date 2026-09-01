@@ -214,20 +214,43 @@
     <!-- Heatmap Timeline -->
     <div class="heatmap-container" id="heatmap-container">
       <div class="heatmap-header">
-        <span class="heatmap-title">Activity Streak</span>
+        <div class="heatmap-title-group">
+          <span class="heatmap-title">Activity Streak</span>
+          <div class="heatmap-stats" id="heatmap-stats">
+            <span class="heatmap-stat-item streak-current" id="streak-current">🔥 0-day streak</span>
+            <span class="heatmap-stat-divider">•</span>
+            <span class="heatmap-stat-item" id="streak-longest">Longest streak: 0 days</span>
+            <span class="heatmap-stat-divider">•</span>
+            <span class="heatmap-stat-item" id="streak-active">0 active days total</span>
+          </div>
+        </div>
         <button class="btn btn-secondary btn-sm" id="heatmap-clear-btn" style="display:none; padding: 2px 8px; font-size: 0.7rem;">Clear Date Filter</button>
       </div>
-      <div class="heatmap-scroll">
-        <div class="heatmap-grid" id="heatmap-grid"></div>
+      <div class="heatmap-body">
+        <div class="heatmap-days">
+          <div></div>
+          <div>Mon</div>
+          <div></div>
+          <div>Wed</div>
+          <div></div>
+          <div>Fri</div>
+          <div></div>
+        </div>
+        <div class="heatmap-scroll">
+          <div class="heatmap-months" id="heatmap-months"></div>
+          <div class="heatmap-grid" id="heatmap-grid"></div>
+        </div>
       </div>
-      <div class="heatmap-legend">
-        <span>Less</span>
-        <div class="heatmap-cell lvl-0"></div>
-        <div class="heatmap-cell lvl-1"></div>
-        <div class="heatmap-cell lvl-2"></div>
-        <div class="heatmap-cell lvl-3"></div>
-        <div class="heatmap-cell lvl-4"></div>
-        <span>More</span>
+      <div class="heatmap-footer">
+        <div class="heatmap-legend">
+          <span>Less</span>
+          <div class="heatmap-cell lvl-0"></div>
+          <div class="heatmap-cell lvl-1"></div>
+          <div class="heatmap-cell lvl-2"></div>
+          <div class="heatmap-cell lvl-3"></div>
+          <div class="heatmap-cell lvl-4"></div>
+          <span>More</span>
+        </div>
       </div>
     </div>
 

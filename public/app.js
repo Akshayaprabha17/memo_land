@@ -299,12 +299,34 @@
       startDate.setDate(startDate.getDate() - 1);
     }
 
+    const heatmapMonths = document.getElementById('heatmap-months');
+    if (heatmapMonths) heatmapMonths.innerHTML = '';
+
     const fragment = document.createDocumentFragment();
+    const monthsFragment = document.createDocumentFragment();
+
     let iterDate = new Date(startDate);
+    let weekIndex = 0;
+    let lastMonth = -1;
+    let lastLabeledWeek = -5;
     
     while (iterDate <= today) {
       const dateStr = iterDate.toISOString().split('T')[0];
       const count = counts[dateStr] || 0;
+      const currentMonth = iterDate.getMonth();
+      const dayOfWeek = iterDate.getDay();
+
+      if (dayOfWeek === 0 && currentMonth !== lastMonth) {
+        if (weekIndex - lastLabeledWeek >= 2) {
+          const monthLabel = document.createElement('span');
+          monthLabel.className = 'heatmap-month-label';
+          monthLabel.style.gridColumnStart = weekIndex + 1;
+          monthLabel.textContent = iterDate.toLocaleDateString('en-US', { month: 'short' });
+          monthsFragment.appendChild(monthLabel);
+          lastLabeledWeek = weekIndex;
+        }
+        lastMonth = currentMonth;
+      }
       
       let lvl = 0;
       if (count > 0) lvl = 1;
@@ -335,14 +357,80 @@
       });
       
       fragment.appendChild(cell);
+
+      if (dayOfWeek === 6) {
+        weekIndex++;
+      }
       iterDate.setDate(iterDate.getDate() + 1);
     }
     
+    if (heatmapMonths) heatmapMonths.appendChild(monthsFragment);
     heatmapGrid.appendChild(fragment);
     
     // Scroll to the far right (most recent)
     const scrollContainer = document.querySelector('.heatmap-scroll');
     if (scrollContainer) scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+
+    // --- Streak & Active Stats Calculation ---
+    const activeDates = Object.keys(counts || {}).filter(d => counts[d] > 0);
+    const activeDaysTotal = activeDates.length;
+    const activeSet = new Set(activeDates);
+
+    // Current Streak
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const yest = new Date(now);
+    yest.setDate(yest.getDate() - 1);
+    const yestStr = yest.toISOString().split('T')[0];
+
+    let currentStreak = 0;
+    let checkDate = activeSet.has(todayStr) ? new Date(now) : (activeSet.has(yestStr) ? yest : null);
+    if (checkDate) {
+      while (true) {
+        const dStr = checkDate.toISOString().split('T')[0];
+        if (activeSet.has(dStr)) {
+          currentStreak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    }
+
+    // Longest Streak
+    const dayIndices = activeDates
+      .map(dStr => Math.floor(Date.parse(dStr + 'T00:00:00Z') / 86400000))
+      .sort((a, b) => a - b);
+
+    let longestStreak = 0;
+    let tempStreak = 0;
+    let prevIdx = null;
+
+    for (const idx of dayIndices) {
+      if (prevIdx === null || idx === prevIdx + 1) {
+        tempStreak++;
+      } else {
+        tempStreak = 1;
+      }
+      prevIdx = idx;
+      if (tempStreak > longestStreak) longestStreak = tempStreak;
+    }
+    if (currentStreak > longestStreak) longestStreak = currentStreak;
+
+    // Update DOM
+    const streakCurrentEl = document.getElementById('streak-current');
+    const streakLongestEl = document.getElementById('streak-longest');
+    const streakActiveEl = document.getElementById('streak-active');
+
+    if (streakCurrentEl) {
+      streakCurrentEl.textContent = `🔥 ${currentStreak}-day streak`;
+    }
+    if (streakLongestEl) {
+      streakLongestEl.textContent = `Longest streak: ${longestStreak} day${longestStreak === 1 ? '' : 's'}`;
+    }
+    if (streakActiveEl) {
+      streakActiveEl.textContent = `${activeDaysTotal} active day${activeDaysTotal === 1 ? '' : 's'} total`;
+    }
   }
 
   if (heatmapClearBtn) {
