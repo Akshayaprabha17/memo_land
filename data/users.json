@@ -1,0 +1,20 @@
+[
+  {
+    "id": "demo-user-id",
+    "username": "demo",
+    "email": "demo@memoland.app",
+    "passwordHash": "9e0f4951818747a4b1409aa81991a276242a1305460782af2c36492caf2ff4d30984080a910528fc7c380c689288d35ee0039d32d67c3b14acd535bddba35c15",
+    "salt": "95e924580d2890b03219445711a8e7f8",
+    "avatar": "🚀",
+    "createdAt": "2026-09-01T14:26:46.209Z"
+  },
+  {
+    "id": "cd051364-d92c-41e5-84ec-08605fef8b02",
+    "username": "prabha",
+    "email": "prabha17akshaya@gmail.com",
+    "passwordHash": "48007eee5848244146b6ac3c129b252301c73b0a25cd43c35860535023caa6ab1a2f4a95b87f37d24f7e3445da18b5ad40bc1dfd56310eaee0d0499ac77a1511",
+    "salt": "4ae27c709de9001efcfdbc61a1351f80",
+    "avatar": "👾",
+    "createdAt": "2026-09-01T15:02:47.938Z"
+  }
+]

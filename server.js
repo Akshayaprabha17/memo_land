@@ -10,6 +10,9 @@ const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'memories.json');
 const SHARES_FILE = path.join(DATA_DIR, 'shares.json');
 
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -43,6 +46,216 @@ function readShares() {
 function writeShares(shares) {
   fs.writeFileSync(SHARES_FILE, JSON.stringify(shares, null, 2), 'utf-8');
 }
+
+function readUsers() {
+  try {
+    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+  } catch (err) {
+    return [];
+  }
+}
+
+function writeUsers(users) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+}
+
+function readSessions() {
+  try {
+    return JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf-8'));
+  } catch (err) {
+    return [];
+  }
+}
+
+function writeSessions(sessions) {
+  fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
+}
+
+function hashPassword(password, salt) {
+  return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+}
+
+function sanitizeUser(user) {
+  if (!user) return null;
+  const u = { ...user };
+  delete u.passwordHash;
+  delete u.salt;
+  return u;
+}
+
+// Default demo user seeding & legacy memory migration
+const DEFAULT_DEMO_USER_ID = 'demo-user-id';
+(function seedDefaultUser() {
+  let users = readUsers();
+  let demoUser = users.find(u => u.id === DEFAULT_DEMO_USER_ID || u.username === 'demo');
+  if (!demoUser) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    demoUser = {
+      id: DEFAULT_DEMO_USER_ID,
+      username: 'demo',
+      email: 'demo@memoland.app',
+      passwordHash: hashPassword('demo123', salt),
+      salt: salt,
+      avatar: '🚀',
+      createdAt: new Date().toISOString()
+    };
+    users.push(demoUser);
+    writeUsers(users);
+  }
+
+  // Ensure all existing memories belong to default user if unassigned
+  let memories = readMemories();
+  let updated = false;
+  memories.forEach(m => {
+    if (!m.userId) {
+      m.userId = demoUser.id;
+      updated = true;
+    }
+  });
+  if (updated) {
+    writeMemories(memories);
+  }
+})();
+
+function getAuthToken(req) {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    return req.headers.authorization.split(' ')[1];
+  }
+  if (req.headers.cookie) {
+    const match = req.headers.cookie.split(';').find(c => c.trim().startsWith('session_token='));
+    if (match) return match.split('=')[1].trim();
+  }
+  return null;
+}
+
+function resolveUser(req, res, next) {
+  const token = getAuthToken(req);
+  const users = readUsers();
+  const sessions = readSessions();
+  const now = Date.now();
+
+  let sessionUser = null;
+  if (token) {
+    const session = sessions.find(s => s.token === token && s.expiresAt > now);
+    if (session) {
+      sessionUser = users.find(u => u.id === session.userId);
+    }
+  }
+
+  req.sessionUser = sessionUser;
+  // Fallback to demo user if unauthenticated for seamless data reading
+  req.currentUser = sessionUser || users.find(u => u.id === DEFAULT_DEMO_USER_ID) || users[0];
+  next();
+}
+
+app.use(resolveUser);
+
+// --- Auth Endpoints ---
+
+// POST /api/auth/register
+app.post('/api/auth/register', (req, res) => {
+  const { username, email, password, avatar } = req.body;
+  if (!username || username.trim().length < 3) {
+    return res.status(400).json({ error: 'Username must be at least 3 characters.' });
+  }
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  }
+
+  const users = readUsers();
+  const cleanUsername = username.trim().toLowerCase();
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (users.some(u => u.username.toLowerCase() === cleanUsername)) {
+    return res.status(400).json({ error: 'Username is already taken.' });
+  }
+  if (users.some(u => u.email.toLowerCase() === cleanEmail)) {
+    return res.status(400).json({ error: 'Email is already registered.' });
+  }
+
+  const salt = crypto.randomBytes(16).toString('hex');
+  const newUser = {
+    id: uuidv4(),
+    username: username.trim(),
+    email: cleanEmail,
+    passwordHash: hashPassword(password, salt),
+    salt: salt,
+    avatar: avatar || '👤',
+    createdAt: new Date().toISOString()
+  };
+
+  users.push(newUser);
+  writeUsers(users);
+
+  // Create session
+  const token = crypto.randomBytes(32).toString('hex');
+  const sessions = readSessions();
+  sessions.push({
+    token,
+    userId: newUser.id,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+  });
+  writeSessions(sessions);
+
+  res.cookie('session_token', token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.status(201).json({ user: sanitizeUser(newUser), token });
+});
+
+// POST /api/auth/login
+app.post('/api/auth/login', (req, res) => {
+  const { login, password } = req.body;
+  if (!login || !password) {
+    return res.status(400).json({ error: 'Username/email and password are required.' });
+  }
+
+  const users = readUsers();
+  const cleanLogin = login.trim().toLowerCase();
+  const user = users.find(u => u.username.toLowerCase() === cleanLogin || u.email.toLowerCase() === cleanLogin);
+
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid username/email or password.' });
+  }
+
+  const hash = hashPassword(password, user.salt);
+  if (hash !== user.passwordHash) {
+    return res.status(401).json({ error: 'Invalid username/email or password.' });
+  }
+
+  // Create session
+  const token = crypto.randomBytes(32).toString('hex');
+  const sessions = readSessions();
+  sessions.push({
+    token,
+    userId: user.id,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000
+  });
+  writeSessions(sessions);
+
+  res.cookie('session_token', token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.json({ user: sanitizeUser(user), token });
+});
+
+// POST /api/auth/logout
+app.post('/api/auth/logout', (req, res) => {
+  const token = getAuthToken(req);
+  if (token) {
+    let sessions = readSessions();
+    sessions = sessions.filter(s => s.token !== token);
+    writeSessions(sessions);
+  }
+  res.clearCookie('session_token');
+  res.json({ success: true });
+});
+
+// GET /api/auth/me
+app.get('/api/auth/me', (req, res) => {
+  res.json({ user: sanitizeUser(req.sessionUser) });
+});
 
 function hashPin(pin, salt) {
   return crypto.pbkdf2Sync(pin, salt, 10000, 64, 'sha512').toString('hex');
@@ -135,7 +348,7 @@ app.post('/api/memories/:id/verify', (req, res) => {
 
 // GET all memories — supports ?page, ?limit, ?sort, ?category, ?tag, ?date
 app.get('/api/memories', (req, res) => {
-  let memories = readMemories();
+  let memories = readMemories().filter(m => m.userId === req.currentUser.id);
   const { category, tag, date, sort = 'newest', page = 1, limit = 12 } = req.query;
 
   if (category && category !== 'all') {
@@ -197,7 +410,7 @@ app.get('/api/memories/search', (req, res) => {
   const { q, tag, date, sort = 'newest', page = 1, limit = 12 } = req.query;
   if (!q && !date) return res.json({ data: [], total: 0, page: 1, limit: 12, hasMore: false });
 
-  let memories = readMemories();
+  let memories = readMemories().filter(m => m.userId === req.currentUser.id);
   
   if (q) {
     const query = q.toLowerCase();
@@ -249,7 +462,7 @@ app.get('/api/memories/search', (req, res) => {
 
 // GET all unique tags with usage counts
 app.get('/api/tags', (req, res) => {
-  const memories = readMemories();
+  const memories = readMemories().filter(m => m.userId === req.currentUser.id);
   const tagMap = {};
   memories.forEach(m => {
     (m.tags || []).forEach(t => { tagMap[t] = (tagMap[t] || 0) + 1; });
@@ -262,7 +475,7 @@ app.get('/api/tags', (req, res) => {
 
 // GET stats summary
 app.get('/api/stats', (req, res) => {
-  const memories = readMemories();
+  const memories = readMemories().filter(m => m.userId === req.currentUser.id);
   const total = memories.length;
 
   // Category breakdown
@@ -324,7 +537,7 @@ app.get('/api/stats', (req, res) => {
 
 // GET heatmap data (counts per day)
 app.get('/api/heatmap', (req, res) => {
-  const memories = readMemories();
+  const memories = readMemories().filter(m => m.userId === req.currentUser.id);
   const counts = {};
   memories.forEach(m => {
     const date = m.createdAt.split('T')[0];
@@ -346,6 +559,7 @@ app.post('/api/memories', (req, res) => {
     : [];
   const newMemory = {
     id: uuidv4(),
+    userId: req.currentUser.id,
     title: title.trim(),
     content: content.trim(),
     category: category || 'personal',

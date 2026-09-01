@@ -28,7 +28,7 @@
         </svg>
         <span>Memory Lock</span>
       </div>
-      <button class="landing-nav-cta" id="nav-enter-btn">Enter Vault</button>
+      <button class="landing-nav-cta" id="nav-enter-btn">Sign In</button>
     </nav>
 
     <!-- Hero Section -->
@@ -54,10 +54,9 @@
         <button class="hero-cta" id="hero-enter-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 5-5 5 5 0 0 1 5 5"></path>
-            <line x1="17" y1="7" x2="17" y2="4"></line>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          Enter Your Vault
+          Login / Sign Up to Vault
           <span class="cta-arrow">→</span>
         </button>
       </div>
@@ -173,6 +172,32 @@
           <option value="alpha-za">Z → A</option>
           <option value="edited">Most Edited</option>
         </select>
+      </div>
+      <!-- User Auth Header -->
+      <div class="auth-header-container" id="auth-header-container">
+        <div class="user-badge" id="user-badge" style="display:none;">
+          <span class="user-avatar" id="user-avatar-badge">🚀</span>
+          <span class="user-name" id="user-name-badge">@demo</span>
+          <button class="user-menu-btn" id="user-menu-btn" aria-label="User Menu">▾</button>
+          <div class="user-dropdown" id="user-dropdown" style="display:none;">
+            <div class="user-dropdown-header">
+              <span class="user-dropdown-email" id="user-dropdown-email">demo@memoland.app</span>
+            </div>
+            <button class="user-dropdown-item" id="user-profile-btn">
+              <span>👤 Profile</span>
+            </button>
+            <button class="user-dropdown-item" id="user-switch-btn">
+              <span>🔄 Switch Account</span>
+            </button>
+            <button class="user-dropdown-item danger" id="user-logout-btn">
+              <span>🚪 Log Out</span>
+            </button>
+          </div>
+        </div>
+        <div class="auth-buttons" id="auth-buttons">
+          <button class="btn btn-secondary btn-sm" id="header-login-btn">Sign In</button>
+          <button class="btn btn-primary btn-sm" id="header-register-btn">Create Account</button>
+        </div>
       </div>
     </div>
   </header>
@@ -528,6 +553,108 @@
       <div id="stats-facts" class="stats-facts"></div>
     </div>
   </div>
+  <!-- Auth Modal (Sign In / Register) -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal auth-modal-content">
+      <div class="modal-header">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="auth-tab-login" data-tab="login">Sign In</button>
+          <button class="auth-tab" id="auth-tab-register" data-tab="register">Create Account</button>
+        </div>
+        <button class="modal-close" id="auth-modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form">
+        <div class="form-group">
+          <label for="login-input">Username or Email</label>
+          <input type="text" id="login-input" placeholder="e.g. alex or alex@dev.com" required autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <div class="password-wrapper">
+            <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password" />
+            <button type="button" class="toggle-password-btn" data-target="login-password" aria-label="Toggle password visibility">👁️</button>
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top: 20px;">
+          <button type="submit" class="btn btn-primary btn-full">
+            <span>Sign In</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="auth-form" style="display: none;">
+        <div class="form-group">
+          <label for="register-username">Username</label>
+          <input type="text" id="register-username" placeholder="Choose a username (min 3 chars)" required autocomplete="username" minlength="3" />
+        </div>
+        <div class="form-group">
+          <label for="register-email">Email Address</label>
+          <input type="email" id="register-email" placeholder="name@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="register-password">Password</label>
+          <div class="password-wrapper">
+            <input type="password" id="register-password" placeholder="Create a password (min 6 chars)" required autocomplete="new-password" minlength="6" />
+            <button type="button" class="toggle-password-btn" data-target="register-password" aria-label="Toggle password visibility">👁️</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Choose Profile Avatar</label>
+          <div class="avatar-picker" id="avatar-picker">
+            <button type="button" class="avatar-option active" data-avatar="🚀">🚀</button>
+            <button type="button" class="avatar-option" data-avatar="⚡">⚡</button>
+            <button type="button" class="avatar-option" data-avatar="🧠">🧠</button>
+            <button type="button" class="avatar-option" data-avatar="💎">💎</button>
+            <button type="button" class="avatar-option" data-avatar="🦊">🦊</button>
+            <button type="button" class="avatar-option" data-avatar="👾">👾</button>
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top: 20px;">
+          <button type="submit" class="btn btn-primary btn-full">
+            <span>Create Free Account</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal profile-modal-content">
+      <div class="modal-header">
+        <h2>Developer Profile</h2>
+        <button class="modal-close" id="profile-modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="profile-body">
+        <div class="profile-avatar-large" id="profile-avatar-large">🚀</div>
+        <h3 class="profile-username" id="profile-username">@demo</h3>
+        <p class="profile-email" id="profile-email">demo@memoland.app</p>
+
+        <div class="profile-stats-grid">
+          <div class="profile-stat-box">
+            <span class="profile-stat-val" id="profile-stat-memories">0</span>
+            <span class="profile-stat-lbl">Memories</span>
+          </div>
+          <div class="profile-stat-box">
+            <span class="profile-stat-val" id="profile-stat-streak">0d</span>
+            <span class="profile-stat-lbl">Active Streak</span>
+          </div>
+          <div class="profile-stat-box">
+            <span class="profile-stat-val" id="profile-stat-joined">Today</span>
+            <span class="profile-stat-lbl">Joined</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions" style="display: flex; justify-content: space-between; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" id="profile-switch-acc-btn">Switch Account</button>
+        <button type="button" class="btn btn-danger" id="profile-logout-btn">Log Out</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Stats Backdrop -->
   <div id="stats-backdrop" class="stats-backdrop"></div>
 

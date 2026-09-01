@@ -7,6 +7,7 @@
   'use strict';
 
   // --- State ---
+  let currentUser = null;     // active user object or null if unauthenticated
   let allMemories = [];       // accumulated across pages
   let page = 1;
   let hasMore = false;
@@ -1345,6 +1346,7 @@
   const landingNav = document.getElementById('landing-nav');
 
   function enterVault() {
+    if (!landingPage || landingPage.style.display === 'none') return;
     landingPage.classList.add('leaving');
     setTimeout(() => {
       landingPage.style.display = 'none';
@@ -1359,8 +1361,16 @@
     }, 700);
   }
 
-  heroEnterBtn.addEventListener('click', enterVault);
-  navEnterBtn.addEventListener('click', enterVault);
+  function handleLandingCtaClick() {
+    if (currentUser) {
+      enterVault();
+    } else {
+      openAuthModal('login');
+    }
+  }
+
+  if (heroEnterBtn) heroEnterBtn.addEventListener('click', handleLandingCtaClick);
+  if (navEnterBtn) navEnterBtn.addEventListener('click', handleLandingCtaClick);
 
   window.addEventListener('scroll', () => {
     if (!landingPage || landingPage.style.display === 'none') return;
@@ -1397,9 +1407,9 @@
       statsBackdrop.classList.remove('open');
     }
 
-    statsBtn.addEventListener('click', openStats);
-    statsClose.addEventListener('click', closeStats);
-    statsBackdrop.addEventListener('click', closeStats);
+    if (statsBtn) statsBtn.addEventListener('click', openStats);
+    if (statsClose) statsClose.addEventListener('click', closeStats);
+    if (statsBackdrop) statsBackdrop.addEventListener('click', closeStats);
 
     async function loadStats() {
       try {
@@ -1511,4 +1521,263 @@
     }
   })();
 
-})();
+  // --- Auth & Profile State Management ---
+  const userBadge = document.getElementById('user-badge');
+    const userAvatarBadge = document.getElementById('user-avatar-badge');
+    const userNameBadge = document.getElementById('user-name-badge');
+    const userDropdown = document.getElementById('user-dropdown');
+    const userDropdownEmail = document.getElementById('user-dropdown-email');
+    const authButtons = document.getElementById('auth-buttons');
+    const headerLoginBtn = document.getElementById('header-login-btn');
+    const headerRegisterBtn = document.getElementById('header-register-btn');
+
+    const authModal = document.getElementById('auth-modal');
+    const authModalClose = document.getElementById('auth-modal-close');
+    const authTabLogin = document.getElementById('auth-tab-login');
+    const authTabRegister = document.getElementById('auth-tab-register');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const loginInput = document.getElementById('login-input');
+    const loginPassword = document.getElementById('login-password');
+    const registerUsername = document.getElementById('register-username');
+    const registerEmail = document.getElementById('register-email');
+    const registerPassword = document.getElementById('register-password');
+    const avatarPicker = document.getElementById('avatar-picker');
+
+    const profileModal = document.getElementById('profile-modal');
+    const profileModalClose = document.getElementById('profile-modal-close');
+    const userProfileBtn = document.getElementById('user-profile-btn');
+    const userSwitchBtn = document.getElementById('user-switch-btn');
+    const userLogoutBtn = document.getElementById('user-logout-btn');
+    const profileSwitchAccBtn = document.getElementById('profile-switch-acc-btn');
+    const profileLogoutBtn = document.getElementById('profile-logout-btn');
+
+    let selectedAvatar = '🚀';
+
+    // Toggle Password Visibility
+    document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.target;
+        const input = document.getElementById(targetId);
+        if (input) {
+          const isPass = input.type === 'password';
+          input.type = isPass ? 'text' : 'password';
+          btn.textContent = isPass ? '🙈' : '👁️';
+        }
+      });
+    });
+
+    // Avatar Selection
+    if (avatarPicker) {
+      avatarPicker.querySelectorAll('.avatar-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          avatarPicker.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('active'));
+          opt.classList.add('active');
+          selectedAvatar = opt.dataset.avatar;
+        });
+      });
+    }
+
+    // Modal Tabbing
+    function switchAuthTab(tab) {
+      if (tab === 'login') {
+        if (authTabLogin) authTabLogin.classList.add('active');
+        if (authTabRegister) authTabRegister.classList.remove('active');
+        if (loginForm) loginForm.style.display = 'block';
+        if (registerForm) registerForm.style.display = 'none';
+      } else {
+        if (authTabRegister) authTabRegister.classList.add('active');
+        if (authTabLogin) authTabLogin.classList.remove('active');
+        if (registerForm) registerForm.style.display = 'block';
+        if (loginForm) loginForm.style.display = 'none';
+      }
+    }
+
+    if (authTabLogin) authTabLogin.addEventListener('click', () => switchAuthTab('login'));
+    if (authTabRegister) authTabRegister.addEventListener('click', () => switchAuthTab('register'));
+
+    function openAuthModal(tab = 'login') {
+      switchAuthTab(tab);
+      if (authModal) authModal.classList.add('active');
+      if (userDropdown) userDropdown.style.display = 'none';
+    }
+
+    function closeAuthModal() {
+      if (authModal) authModal.classList.remove('active');
+    }
+
+    if (authModalClose) authModalClose.addEventListener('click', closeAuthModal);
+    if (authModal) {
+      authModal.addEventListener('click', (e) => {
+        if (e.target === authModal) closeAuthModal();
+      });
+    }
+    if (profileModal) {
+      profileModal.addEventListener('click', (e) => {
+        if (e.target === profileModal) closeProfileModal();
+      });
+    }
+    if (headerLoginBtn) headerLoginBtn.addEventListener('click', () => openAuthModal('login'));
+    if (headerRegisterBtn) headerRegisterBtn.addEventListener('click', () => openAuthModal('register'));
+
+    // Dropdown toggle
+    if (userBadge) {
+      userBadge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = userDropdown.style.display === 'block';
+        userDropdown.style.display = isOpen ? 'none' : 'block';
+      });
+    }
+    document.addEventListener('click', () => {
+      if (userDropdown) userDropdown.style.display = 'none';
+    });
+
+    // Profile Modal
+    function openProfileModal() {
+      if (!currentUser) return;
+      if (userDropdown) userDropdown.style.display = 'none';
+      const avatarLarge = document.getElementById('profile-avatar-large');
+      const usernameEl = document.getElementById('profile-username');
+      const emailEl = document.getElementById('profile-email');
+      const memoriesEl = document.getElementById('profile-stat-memories');
+      const streakEl = document.getElementById('profile-stat-streak');
+      const joinedEl = document.getElementById('profile-stat-joined');
+
+      if (avatarLarge) avatarLarge.textContent = currentUser.avatar || '👤';
+      if (usernameEl) usernameEl.textContent = `@${currentUser.username}`;
+      if (emailEl) emailEl.textContent = currentUser.email || '';
+      if (memoriesEl) memoriesEl.textContent = totalCount || 0;
+      
+      const streakText = document.getElementById('streak-current')?.textContent || '0d';
+      if (streakEl) streakEl.textContent = streakText.replace('🔥 ', '');
+      
+      const joinDate = currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Today';
+      if (joinedEl) joinedEl.textContent = joinDate;
+
+      if (profileModal) profileModal.classList.add('active');
+    }
+
+    function closeProfileModal() {
+      if (profileModal) profileModal.classList.remove('active');
+    }
+
+    if (profileModalClose) profileModalClose.addEventListener('click', closeProfileModal);
+    if (userProfileBtn) userProfileBtn.addEventListener('click', openProfileModal);
+    if (userSwitchBtn) userSwitchBtn.addEventListener('click', () => openAuthModal('login'));
+    if (profileSwitchAccBtn) profileSwitchAccBtn.addEventListener('click', () => {
+      closeProfileModal();
+      openAuthModal('login');
+    });
+
+    // Register Form Handler
+    if (registerForm) {
+      registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = registerUsername.value.trim();
+        const email = registerEmail.value.trim();
+        const password = registerPassword.value;
+        const avatar = selectedAvatar;
+
+        try {
+          const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password, avatar })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Registration failed.');
+
+          currentUser = data.user;
+          updateAuthUI();
+          closeAuthModal();
+          showToast(`Welcome, @${currentUser.username}! ✨`, 'success');
+          refreshAllVaultData();
+          enterVault();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    }
+
+    // Login Form Handler
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const login = loginInput.value.trim();
+        const password = loginPassword.value;
+
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ login, password })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Login failed.');
+
+          currentUser = data.user;
+          updateAuthUI();
+          closeAuthModal();
+          showToast(`Signed in as @${currentUser.username} 👋`, 'success');
+          refreshAllVaultData();
+          enterVault();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    }
+
+    // Logout Handler
+    async function handleLogout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        currentUser = null;
+        updateAuthUI();
+        closeProfileModal();
+        showToast('Logged out successfully', 'info');
+        refreshAllVaultData();
+      } catch (err) {
+        showToast('Logout failed', 'error');
+      }
+    }
+
+    if (userLogoutBtn) userLogoutBtn.addEventListener('click', handleLogout);
+    if (profileLogoutBtn) profileLogoutBtn.addEventListener('click', handleLogout);
+
+    // Update Auth Header UI
+    function updateAuthUI() {
+      if (currentUser) {
+        if (userAvatarBadge) userAvatarBadge.textContent = currentUser.avatar || '👤';
+        if (userNameBadge) userNameBadge.textContent = `@${currentUser.username}`;
+        if (userDropdownEmail) userDropdownEmail.textContent = currentUser.email || '';
+        if (userBadge) userBadge.style.display = 'inline-flex';
+        if (authButtons) authButtons.style.display = 'none';
+        if (navEnterBtn) navEnterBtn.textContent = `Vault (@${currentUser.username})`;
+      } else {
+        if (userBadge) userBadge.style.display = 'none';
+        if (authButtons) authButtons.style.display = 'flex';
+        if (navEnterBtn) navEnterBtn.textContent = 'Sign In';
+      }
+    }
+
+    function refreshAllVaultData() {
+      fetchMemories();
+      fetchTags();
+      fetchHeatmap();
+    }
+
+    // Check Current Auth Session on load
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        currentUser = data.user;
+        updateAuthUI();
+      } catch (e) {
+        currentUser = null;
+        updateAuthUI();
+      }
+    }
+
+    checkAuth();
+  })();
