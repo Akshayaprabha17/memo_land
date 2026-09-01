@@ -1,18 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Memory Lock — Your personal vault for storing and organizing memories, notes, and secrets securely." />
+  <meta name="description"
+    content="Memory Lock — Your personal vault for storing and organizing memories, notes, and secrets securely." />
   <title>Memory Lock — Your Personal Vault</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <!-- Markdown & Sanitizer -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <link rel="stylesheet" href="/style.css">
 </head>
+
 <body>
   <!-- Particle background -->
   <canvas id="particles-canvas"></canvas>
@@ -22,7 +26,8 @@
     <!-- Landing Nav -->
     <nav class="landing-nav" id="landing-nav">
       <div class="landing-nav-logo">
-        <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
         </svg>
@@ -44,7 +49,7 @@
         </div>
 
         <h1 class="hero-title">
-          Your Memories,<br/>
+          Your Memories,<br />
           <span class="hero-title-accent">Safely Locked Away</span>
         </h1>
         <p class="hero-subtitle">
@@ -52,7 +57,8 @@
           Organize, protect, and access your memories anytime.
         </p>
         <button class="hero-cta" id="hero-enter-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
@@ -68,7 +74,8 @@
       <div class="features-grid">
         <div class="feature-card" id="feature-auth">
           <div class="feature-icon feature-icon-violet">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
@@ -79,20 +86,22 @@
 
         <div class="feature-card" id="feature-heatmap">
           <div class="feature-icon feature-icon-emerald">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="16" rx="2"></rect>
               <line x1="16" y1="2" x2="16" y2="6"></line>
               <line x1="8" y1="2" x2="8" y2="6"></line>
               <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
           </div>
-          <h3>GitHub Activity Heatmap</h3>
+          <h3>Activity Heatmap</h3>
           <p>Track daily writing activity, streak counters (🔥 5-day streak), and 12-month contribution grids.</p>
         </div>
 
         <div class="feature-card" id="feature-voice">
           <div class="feature-icon feature-icon-orange">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
               <line x1="12" y1="19" x2="12" y2="23"></line>
@@ -105,7 +114,8 @@
 
         <div class="feature-card" id="feature-markdown">
           <div class="feature-icon feature-icon-rose">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
               <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -118,7 +128,8 @@
 
         <div class="feature-card" id="feature-stats">
           <div class="feature-icon feature-icon-sky">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
               <line x1="18" y1="20" x2="18" y2="10"></line>
               <line x1="12" y1="20" x2="12" y2="4"></line>
               <line x1="6" y1="20" x2="6" y2="14"></line>
@@ -130,7 +141,8 @@
 
         <div class="feature-card" id="feature-lock">
           <div class="feature-icon feature-icon-gold">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
@@ -141,7 +153,8 @@
 
         <div class="feature-card" id="feature-organize">
           <div class="feature-icon feature-icon-violet">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
             </svg>
           </div>
@@ -151,7 +164,8 @@
 
         <div class="feature-card" id="feature-search">
           <div class="feature-icon feature-icon-sky">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
@@ -171,347 +185,410 @@
   <!-- ========== APP DASHBOARD (hidden initially) ========== -->
   <div id="app-wrapper" class="app-wrapper hidden">
 
-  <!-- Header -->
-  <header id="app-header">
-    <div class="header-left">
-      <div class="logo" id="logo">
-        <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Header -->
+    <header id="app-header">
+      <div class="header-left">
+        <div class="logo" id="logo">
+          <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <h1>Memory Lock</h1>
+        </div>
+        <p class="tagline">Your personal vault</p>
+      </div>
+      <div class="header-right">
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        <button class="theme-toggle" id="stats-btn" aria-label="View stats dashboard" title="Stats">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </button>
+        <div class="search-wrapper" id="search-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="search-input" placeholder="Search memories..." autocomplete="off" />
+          <kbd class="search-kbd" id="search-kbd">⌘K</kbd>
+          <button class="search-clear" id="search-clear" aria-label="Clear search">&times;</button>
+        </div>
+        <div class="memory-count" id="memory-count">
+          <span id="count-number">0</span> memories
+        </div>
+        <div class="sort-wrapper">
+          <select id="sort-select" class="sort-select" aria-label="Sort memories">
+            <option value="newest">↓ Newest</option>
+            <option value="oldest">↑ Oldest</option>
+            <option value="alpha-az">A → Z</option>
+            <option value="alpha-za">Z → A</option>
+            <option value="edited">Most Edited</option>
+          </select>
+        </div>
+        <!-- User Auth Header -->
+        <div class="auth-header-container" id="auth-header-container">
+          <div class="user-badge" id="user-badge" style="display:none;">
+            <span class="user-avatar" id="user-avatar-badge">🚀</span>
+            <span class="user-name" id="user-name-badge">@demo</span>
+            <button class="user-menu-btn" id="user-menu-btn" aria-label="User Menu">▾</button>
+            <div class="user-dropdown" id="user-dropdown" style="display:none;">
+              <div class="user-dropdown-header">
+                <span class="user-dropdown-email" id="user-dropdown-email">demo@memoland.app</span>
+              </div>
+              <button class="user-dropdown-item" id="user-profile-btn">
+                <span>👤 Profile</span>
+              </button>
+              <button class="user-dropdown-item" id="user-switch-btn">
+                <span>🔄 Switch Account</span>
+              </button>
+              <button class="user-dropdown-item danger" id="user-logout-btn">
+                <span>🚪 Log Out</span>
+              </button>
+            </div>
+          </div>
+          <div class="auth-buttons" id="auth-buttons">
+            <button class="btn btn-secondary btn-sm" id="header-login-btn">Sign In</button>
+            <button class="btn btn-primary btn-sm" id="header-register-btn">Create Account</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Category Filters -->
+    <nav id="category-nav">
+      <div class="category-scroll">
+        <button class="cat-btn active" data-category="all" id="cat-all">
+          <span class="cat-icon">🌐</span> All
+        </button>
+        <button class="cat-btn" data-category="personal" id="cat-personal">
+          <span class="cat-icon">💜</span> Personal
+        </button>
+        <button class="cat-btn" data-category="work" id="cat-work">
+          <span class="cat-icon">💼</span> Work
+        </button>
+        <button class="cat-btn" data-category="ideas" id="cat-ideas">
+          <span class="cat-icon">💡</span> Ideas
+        </button>
+        <button class="cat-btn" data-category="secrets" id="cat-secrets">
+          <span class="cat-icon">🤫</span> Secrets
+        </button>
+        <button class="cat-btn" data-category="important" id="cat-important">
+          <span class="cat-icon">⭐</span> Important
+        </button>
+      </div>
+    </nav>
+
+    <!-- Tag filter bar (shown when tags exist) -->
+    <div id="tag-filter-bar" class="tag-filter-bar" style="display:none;">
+      <span class="tag-filter-label">Tags</span>
+      <div class="tag-filter-chips" id="tag-filter-chips"></div>
+      <button class="tag-clear-btn" id="tag-clear-btn" style="display:none;">× Clear</button>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content">
+
+      <!-- Heatmap Timeline -->
+      <div class="heatmap-container" id="heatmap-container">
+        <div class="heatmap-header">
+          <div class="heatmap-title-group">
+            <span class="heatmap-title">Activity Streak</span>
+            <div class="heatmap-stats" id="heatmap-stats">
+              <span class="heatmap-stat-item streak-current" id="streak-current">🔥 0-day streak</span>
+              <span class="heatmap-stat-divider">•</span>
+              <span class="heatmap-stat-item" id="streak-longest">Longest streak: 0 days</span>
+              <span class="heatmap-stat-divider">•</span>
+              <span class="heatmap-stat-item" id="streak-active">0 active days total</span>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="heatmap-clear-btn"
+            style="display:none; padding: 2px 8px; font-size: 0.7rem;">Clear Date Filter</button>
+        </div>
+        <div class="heatmap-body">
+          <div class="heatmap-days">
+            <div></div>
+            <div>Mon</div>
+            <div></div>
+            <div>Wed</div>
+            <div></div>
+            <div>Fri</div>
+            <div></div>
+          </div>
+          <div class="heatmap-scroll">
+            <div class="heatmap-months" id="heatmap-months"></div>
+            <div class="heatmap-grid" id="heatmap-grid"></div>
+          </div>
+        </div>
+        <div class="heatmap-footer">
+          <div class="heatmap-legend">
+            <span>Less</span>
+            <div class="heatmap-cell lvl-0"></div>
+            <div class="heatmap-cell lvl-1"></div>
+            <div class="heatmap-cell lvl-2"></div>
+            <div class="heatmap-cell lvl-3"></div>
+            <div class="heatmap-cell lvl-4"></div>
+            <span>More</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sort / results toolbar -->
+      <div class="sort-toolbar" id="sort-toolbar">
+        <span class="results-info" id="results-info"></span>
+      </div>
+
+      <!-- Empty State: no memories at all -->
+      <div class="empty-state" id="empty-state" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+          stroke-linejoin="round">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
         </svg>
-        <h1>Memory Lock</h1>
+        <h2>No memories yet</h2>
+        <p>Your vault is empty. Press <kbd>N</kbd> or click the <strong>+</strong> button to store your first memory.
+        </p>
       </div>
-      <p class="tagline">Your personal vault</p>
-    </div>
-    <div class="header-right">
-      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme">
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-          <circle cx="12" cy="12" r="5"></circle>
-          <line x1="12" y1="1" x2="12" y2="3"></line>
-          <line x1="12" y1="21" x2="12" y2="23"></line>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-          <line x1="1" y1="12" x2="3" y2="12"></line>
-          <line x1="21" y1="12" x2="23" y2="12"></line>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-        </svg>
-      </button>
-      <button class="theme-toggle" id="stats-btn" aria-label="View stats dashboard" title="Stats">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"></line>
-          <line x1="12" y1="20" x2="12" y2="4"></line>
-          <line x1="6" y1="20" x2="6" y2="14"></line>
-        </svg>
-      </button>
-      <div class="search-wrapper" id="search-wrapper">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+      <!-- Empty State: search returned nothing -->
+      <div class="empty-state empty-state-search" id="empty-search-state" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+          stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          <line x1="8" y1="11" x2="14" y2="11"></line>
         </svg>
-        <input type="text" id="search-input" placeholder="Search memories..." autocomplete="off" />
-        <kbd class="search-kbd" id="search-kbd">⌘K</kbd>
-        <button class="search-clear" id="search-clear" aria-label="Clear search">&times;</button>
+        <h2>No results found</h2>
+        <p id="empty-search-msg">No memories match your search.</p>
+        <button class="btn btn-secondary" id="empty-search-clear">Clear Search</button>
       </div>
-      <div class="memory-count" id="memory-count">
-        <span id="count-number">0</span> memories
-      </div>
-      <div class="sort-wrapper">
-        <select id="sort-select" class="sort-select" aria-label="Sort memories">
-          <option value="newest">↓ Newest</option>
-          <option value="oldest">↑ Oldest</option>
-          <option value="alpha-az">A → Z</option>
-          <option value="alpha-za">Z → A</option>
-          <option value="edited">Most Edited</option>
-        </select>
-      </div>
-      <!-- User Auth Header -->
-      <div class="auth-header-container" id="auth-header-container">
-        <div class="user-badge" id="user-badge" style="display:none;">
-          <span class="user-avatar" id="user-avatar-badge">🚀</span>
-          <span class="user-name" id="user-name-badge">@demo</span>
-          <button class="user-menu-btn" id="user-menu-btn" aria-label="User Menu">▾</button>
-          <div class="user-dropdown" id="user-dropdown" style="display:none;">
-            <div class="user-dropdown-header">
-              <span class="user-dropdown-email" id="user-dropdown-email">demo@memoland.app</span>
-            </div>
-            <button class="user-dropdown-item" id="user-profile-btn">
-              <span>👤 Profile</span>
-            </button>
-            <button class="user-dropdown-item" id="user-switch-btn">
-              <span>🔄 Switch Account</span>
-            </button>
-            <button class="user-dropdown-item danger" id="user-logout-btn">
-              <span>🚪 Log Out</span>
-            </button>
-          </div>
-        </div>
-        <div class="auth-buttons" id="auth-buttons">
-          <button class="btn btn-secondary btn-sm" id="header-login-btn">Sign In</button>
-          <button class="btn btn-primary btn-sm" id="header-register-btn">Create Account</button>
-        </div>
-      </div>
-    </div>
-  </header>
 
-  <!-- Category Filters -->
-  <nav id="category-nav">
-    <div class="category-scroll">
-      <button class="cat-btn active" data-category="all" id="cat-all">
-        <span class="cat-icon">🌐</span> All
-      </button>
-      <button class="cat-btn" data-category="personal" id="cat-personal">
-        <span class="cat-icon">💜</span> Personal
-      </button>
-      <button class="cat-btn" data-category="work" id="cat-work">
-        <span class="cat-icon">💼</span> Work
-      </button>
-      <button class="cat-btn" data-category="ideas" id="cat-ideas">
-        <span class="cat-icon">💡</span> Ideas
-      </button>
-      <button class="cat-btn" data-category="secrets" id="cat-secrets">
-        <span class="cat-icon">🤫</span> Secrets
-      </button>
-      <button class="cat-btn" data-category="important" id="cat-important">
-        <span class="cat-icon">⭐</span> Important
-      </button>
-    </div>
-  </nav>
-
-  <!-- Tag filter bar (shown when tags exist) -->
-  <div id="tag-filter-bar" class="tag-filter-bar" style="display:none;">
-    <span class="tag-filter-label">Tags</span>
-    <div class="tag-filter-chips" id="tag-filter-chips"></div>
-    <button class="tag-clear-btn" id="tag-clear-btn" style="display:none;">× Clear</button>
-  </div>
-
-  <!-- Main Content -->
-  <main id="main-content">
-
-    <!-- Heatmap Timeline -->
-    <div class="heatmap-container" id="heatmap-container">
-      <div class="heatmap-header">
-        <div class="heatmap-title-group">
-          <span class="heatmap-title">Activity Streak</span>
-          <div class="heatmap-stats" id="heatmap-stats">
-            <span class="heatmap-stat-item streak-current" id="streak-current">🔥 0-day streak</span>
-            <span class="heatmap-stat-divider">•</span>
-            <span class="heatmap-stat-item" id="streak-longest">Longest streak: 0 days</span>
-            <span class="heatmap-stat-divider">•</span>
-            <span class="heatmap-stat-item" id="streak-active">0 active days total</span>
-          </div>
+      <!-- Skeleton loader -->
+      <div class="memory-grid" id="skeleton-grid" style="display:none;">
+        <div class="skeleton-card">
+          <div class="sk sk-title"></div>
+          <div class="sk sk-line"></div>
+          <div class="sk sk-line sk-short"></div>
+          <div class="sk sk-footer"></div>
         </div>
-        <button class="btn btn-secondary btn-sm" id="heatmap-clear-btn" style="display:none; padding: 2px 8px; font-size: 0.7rem;">Clear Date Filter</button>
-      </div>
-      <div class="heatmap-body">
-        <div class="heatmap-days">
-          <div></div>
-          <div>Mon</div>
-          <div></div>
-          <div>Wed</div>
-          <div></div>
-          <div>Fri</div>
-          <div></div>
+        <div class="skeleton-card">
+          <div class="sk sk-title"></div>
+          <div class="sk sk-line"></div>
+          <div class="sk sk-line sk-short"></div>
+          <div class="sk sk-footer"></div>
         </div>
-        <div class="heatmap-scroll">
-          <div class="heatmap-months" id="heatmap-months"></div>
-          <div class="heatmap-grid" id="heatmap-grid"></div>
+        <div class="skeleton-card">
+          <div class="sk sk-title"></div>
+          <div class="sk sk-line"></div>
+          <div class="sk sk-line sk-short"></div>
+          <div class="sk sk-footer"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="sk sk-title"></div>
+          <div class="sk sk-line"></div>
+          <div class="sk sk-line sk-short"></div>
+          <div class="sk sk-footer"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="sk sk-title"></div>
+          <div class="sk sk-line"></div>
+          <div class="sk sk-line sk-short"></div>
+          <div class="sk sk-footer"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="sk sk-title"></div>
+          <div class="sk sk-line"></div>
+          <div class="sk sk-line sk-short"></div>
+          <div class="sk sk-footer"></div>
         </div>
       </div>
-      <div class="heatmap-footer">
-        <div class="heatmap-legend">
-          <span>Less</span>
-          <div class="heatmap-cell lvl-0"></div>
-          <div class="heatmap-cell lvl-1"></div>
-          <div class="heatmap-cell lvl-2"></div>
-          <div class="heatmap-cell lvl-3"></div>
-          <div class="heatmap-cell lvl-4"></div>
-          <span>More</span>
-        </div>
+
+      <!-- Memory Grid -->
+      <div class="memory-grid" id="memory-grid"></div>
+
+      <!-- Infinite scroll sentinel -->
+      <div id="scroll-sentinel" style="height:1px;"></div>
+
+      <!-- Load more spinner -->
+      <div id="load-more-spinner" class="load-more-spinner" style="display:none;">
+        <div class="spinner-ring"></div>
+        <span>Loading more memories...</span>
       </div>
-    </div>
 
-    <!-- Sort / results toolbar -->
-    <div class="sort-toolbar" id="sort-toolbar">
-      <span class="results-info" id="results-info"></span>
-    </div>
+    </main>
 
-    <!-- Empty State: no memories at all -->
-    <div class="empty-state" id="empty-state" style="display: none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    <!-- Floating Add Button -->
+    <button class="fab" id="fab-add" aria-label="Add new memory">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+        stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
       </svg>
-      <h2>No memories yet</h2>
-      <p>Your vault is empty. Press <kbd>N</kbd> or click the <strong>+</strong> button to store your first memory.</p>
-    </div>
+    </button>
 
-    <!-- Empty State: search returned nothing -->
-    <div class="empty-state empty-state-search" id="empty-search-state" style="display: none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"></circle>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        <line x1="8" y1="11" x2="14" y2="11"></line>
-      </svg>
-      <h2>No results found</h2>
-      <p id="empty-search-msg">No memories match your search.</p>
-      <button class="btn btn-secondary" id="empty-search-clear">Clear Search</button>
-    </div>
-
-    <!-- Skeleton loader -->
-    <div class="memory-grid" id="skeleton-grid" style="display:none;">
-      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
-      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
-      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
-      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
-      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
-      <div class="skeleton-card"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line sk-short"></div><div class="sk sk-footer"></div></div>
-    </div>
-
-    <!-- Memory Grid -->
-    <div class="memory-grid" id="memory-grid"></div>
-
-    <!-- Infinite scroll sentinel -->
-    <div id="scroll-sentinel" style="height:1px;"></div>
-
-    <!-- Load more spinner -->
-    <div id="load-more-spinner" class="load-more-spinner" style="display:none;">
-      <div class="spinner-ring"></div>
-      <span>Loading more memories...</span>
-    </div>
-
-  </main>
-
-  <!-- Floating Add Button -->
-  <button class="fab" id="fab-add" aria-label="Add new memory">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19"></line>
-      <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-  </button>
-
-  <!-- Modal Overlay -->
-  <div class="modal-overlay" id="modal-overlay">
-    <div class="modal" id="modal">
-      <div class="modal-header">
-        <h2 id="modal-title">New Memory</h2>
-        <button class="modal-close" id="modal-close" aria-label="Close modal">&times;</button>
-      </div>
-      <form id="memory-form">
-        <input type="hidden" id="memory-id" />
-        <div class="form-group">
-          <label for="memory-title-input">Title</label>
-          <input type="text" id="memory-title-input" placeholder="Give your memory a name..." required maxlength="100" />
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal" id="modal">
+        <div class="modal-header">
+          <h2 id="modal-title">New Memory</h2>
+          <button class="modal-close" id="modal-close" aria-label="Close modal">&times;</button>
         </div>
-        <div class="form-group">
-          <label for="memory-content-input">Content</label>
-          <div class="content-tabs-row">
-            <div class="content-tabs">
-              <button type="button" class="content-tab active" id="tab-write">Write</button>
-              <button type="button" class="content-tab" id="tab-preview">Preview</button>
+        <form id="memory-form">
+          <input type="hidden" id="memory-id" />
+          <div class="form-group">
+            <label for="memory-title-input">Title</label>
+            <input type="text" id="memory-title-input" placeholder="Give your memory a name..." required
+              maxlength="100" />
+          </div>
+          <div class="form-group">
+            <label for="memory-content-input">Content</label>
+            <div class="content-tabs-row">
+              <div class="content-tabs">
+                <button type="button" class="content-tab active" id="tab-write">Write</button>
+                <button type="button" class="content-tab" id="tab-preview">Preview</button>
+              </div>
+              <button type="button" id="mic-btn" class="mic-btn" title="Voice to text (click to start/stop)"
+                aria-label="Toggle voice input">
+                <svg id="mic-icon-default" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+                <svg id="mic-icon-stop" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;">
+                  <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                </svg>
+              </button>
             </div>
-            <button type="button" id="mic-btn" class="mic-btn" title="Voice to text (click to start/stop)" aria-label="Toggle voice input">
-              <svg id="mic-icon-default" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                <line x1="12" y1="19" x2="12" y2="23"></line>
-                <line x1="8" y1="23" x2="16" y2="23"></line>
+            <div class="content-body">
+              <div id="mic-listening-badge" class="mic-listening-badge" style="display:none;">
+                <span class="mic-pulse"></span> Listening…
+              </div>
+              <textarea id="memory-content-input" placeholder="Write your memory here... (Markdown supported)" required
+                rows="6" maxlength="2000"></textarea>
+              <div id="memory-content-preview" class="markdown-body" style="display:none;"></div>
+            </div>
+            <span class="char-count" id="char-count">0 / 2000</span>
+          </div>
+          <div class="form-group">
+            <label for="memory-category-input">Category</label>
+            <div class="select-wrapper">
+              <select id="memory-category-input">
+                <option value="personal">💜 Personal</option>
+                <option value="work">💼 Work</option>
+                <option value="ideas">💡 Ideas</option>
+                <option value="secrets">🤫 Secrets</option>
+                <option value="important">⭐ Important</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Tags <span class="form-optional">optional</span></label>
+            <div class="tag-input-wrapper" id="tag-input-wrapper">
+              <div class="form-tag-pills" id="form-tag-pills"></div>
+              <input type="text" id="tag-text-input" placeholder="Type a tag, press Enter or comma..."
+                autocomplete="off" maxlength="30" />
+            </div>
+            <p class="form-hint">Max 10 tags · letters, numbers, hyphens</p>
+          </div>
+          <div class="form-group">
+            <label>Attach Image <span class="form-optional">optional</span></label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" class="btn btn-secondary" id="btn-upload-image" style="padding: 8px 16px;">🖼️
+                Choose Image</button>
+              <input type="file" id="memory-image-input" accept="image/*" style="display:none;" />
+              <span id="upload-image-filename" style="font-size: 0.8rem; color: var(--text-muted);">No image
+                selected</span>
+            </div>
+            <div id="image-preview-container"
+              style="display:none; position:relative; margin-top:10px; max-width: 100%;">
+              <img id="image-preview" src="" style="max-height:150px; border-radius:8px; display:block;" />
+              <button type="button" id="btn-remove-image" class="btn btn-danger"
+                style="position:absolute; top:5px; left:5px; padding: 2px 8px; font-size: 0.8rem;">Remove</button>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="btn-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btn-save">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
               </svg>
-              <svg id="mic-icon-stop" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none;">
-                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-              </svg>
+              Save Memory
             </button>
           </div>
-          <div class="content-body">
-            <div id="mic-listening-badge" class="mic-listening-badge" style="display:none;">
-              <span class="mic-pulse"></span> Listening…
-            </div>
-            <textarea id="memory-content-input" placeholder="Write your memory here... (Markdown supported)" required rows="6" maxlength="2000"></textarea>
-            <div id="memory-content-preview" class="markdown-body" style="display:none;"></div>
-          </div>
-          <span class="char-count" id="char-count">0 / 2000</span>
+        </form>
+      </div>
+    </div>
+
+    <!-- View Modal (for locked memories) -->
+    <div class="modal-overlay" id="view-modal-overlay">
+      <div class="modal view-modal" id="view-modal">
+        <div class="modal-header">
+          <h2 id="view-modal-title">Memory</h2>
+          <button class="modal-close" id="view-modal-close" aria-label="Close">&times;</button>
         </div>
-        <div class="form-group">
-          <label for="memory-category-input">Category</label>
-          <div class="select-wrapper">
-            <select id="memory-category-input">
-              <option value="personal">💜 Personal</option>
-              <option value="work">💼 Work</option>
-              <option value="ideas">💡 Ideas</option>
-              <option value="secrets">🤫 Secrets</option>
-              <option value="important">⭐ Important</option>
-            </select>
+        <div class="view-modal-body">
+          <div class="view-image-container" id="view-image-container" style="display:none; margin-bottom: 15px;">
+            <img id="view-image" src="" style="width:100%; max-height:250px; object-fit:cover; border-radius:8px;" />
           </div>
+          <div class="view-category" id="view-category"></div>
+          <div class="view-tags" id="view-tags"></div>
+          <div class="view-content" id="view-content"></div>
+          <div class="view-meta" id="view-meta"></div>
         </div>
-        <div class="form-group">
-          <label>Tags <span class="form-optional">optional</span></label>
-          <div class="tag-input-wrapper" id="tag-input-wrapper">
-            <div class="form-tag-pills" id="form-tag-pills"></div>
-            <input type="text" id="tag-text-input" placeholder="Type a tag, press Enter or comma..." autocomplete="off" maxlength="30" />
-          </div>
-          <p class="form-hint">Max 10 tags · letters, numbers, hyphens</p>
-        </div>
-        <div class="form-group">
-          <label>Attach Image <span class="form-optional">optional</span></label>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <button type="button" class="btn btn-secondary" id="btn-upload-image" style="padding: 8px 16px;">🖼️ Choose Image</button>
-            <input type="file" id="memory-image-input" accept="image/*" style="display:none;" />
-            <span id="upload-image-filename" style="font-size: 0.8rem; color: var(--text-muted);">No image selected</span>
-          </div>
-          <div id="image-preview-container" style="display:none; position:relative; margin-top:10px; max-width: 100%;">
-            <img id="image-preview" src="" style="max-height:150px; border-radius:8px; display:block;" />
-            <button type="button" id="btn-remove-image" class="btn btn-danger" style="position:absolute; top:5px; left:5px; padding: 2px 8px; font-size: 0.8rem;">Remove</button>
-          </div>
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" id="btn-cancel">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-save">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        <div class="view-modal-actions">
+          <button class="btn btn-secondary btn-icon" id="view-edit-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
-            Save Memory
+            Edit
+          </button>
+          <button class="btn btn-secondary btn-icon" id="view-share-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+              <polyline points="16 6 12 2 8 6"></polyline>
+              <line x1="12" y1="2" x2="12" y2="15"></line>
+            </svg>
+            Share Link
+          </button>
+          <button class="btn btn-danger btn-icon" id="view-delete-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Delete
           </button>
         </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- View Modal (for locked memories) -->
-  <div class="modal-overlay" id="view-modal-overlay">
-    <div class="modal view-modal" id="view-modal">
-      <div class="modal-header">
-        <h2 id="view-modal-title">Memory</h2>
-        <button class="modal-close" id="view-modal-close" aria-label="Close">&times;</button>
-      </div>
-      <div class="view-modal-body">
-        <div class="view-image-container" id="view-image-container" style="display:none; margin-bottom: 15px;">
-          <img id="view-image" src="" style="width:100%; max-height:250px; object-fit:cover; border-radius:8px;" />
-        </div>
-        <div class="view-category" id="view-category"></div>
-        <div class="view-tags" id="view-tags"></div>
-        <div class="view-content" id="view-content"></div>
-        <div class="view-meta" id="view-meta"></div>
-      </div>
-      <div class="view-modal-actions">
-        <button class="btn btn-secondary btn-icon" id="view-edit-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-          Edit
-        </button>
-        <button class="btn btn-secondary btn-icon" id="view-share-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-          Share Link
-        </button>
-        <button class="btn btn-danger btn-icon" id="view-delete-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          Delete
-        </button>
       </div>
     </div>
-  </div>
   </div>
   <!-- END app-wrapper -->
   <!-- PIN Setup Modal -->
@@ -523,9 +600,11 @@
       </div>
       <form id="pin-setup-form">
         <div class="form-group">
-          <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">Set a PIN to lock this specific memory. You will need it to unlock it.</p>
+          <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">Set a PIN to lock this
+            specific memory. You will need it to unlock it.</p>
           <label for="new-pin-input">Memory PIN (4+ digits)</label>
-          <input type="password" id="new-pin-input" placeholder="••••" required minlength="4" pattern="[0-9]*" inputmode="numeric" />
+          <input type="password" id="new-pin-input" placeholder="••••" required minlength="4" pattern="[0-9]*"
+            inputmode="numeric" />
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" style="width: 100%;">Lock It</button>
@@ -560,7 +639,8 @@
   <div id="stats-panel" class="stats-panel">
     <div class="stats-panel-header">
       <div class="stats-panel-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
           <line x1="18" y1="20" x2="18" y2="10"></line>
           <line x1="12" y1="20" x2="12" y2="4"></line>
           <line x1="6" y1="20" x2="6" y2="14"></line>
@@ -618,18 +698,21 @@
         </div>
         <button class="modal-close" id="auth-modal-close" aria-label="Close modal">&times;</button>
       </div>
-      
+
       <!-- Login Form -->
       <form id="login-form" class="auth-form">
         <div class="form-group">
           <label for="login-input">Username or Email</label>
-          <input type="text" id="login-input" placeholder="e.g. alex or alex@dev.com" required autocomplete="username" />
+          <input type="text" id="login-input" placeholder="e.g. alex or alex@dev.com" required
+            autocomplete="username" />
         </div>
         <div class="form-group">
           <label for="login-password">Password</label>
           <div class="password-wrapper">
-            <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password" />
-            <button type="button" class="toggle-password-btn" data-target="login-password" aria-label="Toggle password visibility">👁️</button>
+            <input type="password" id="login-password" placeholder="Enter your password" required
+              autocomplete="current-password" />
+            <button type="button" class="toggle-password-btn" data-target="login-password"
+              aria-label="Toggle password visibility">👁️</button>
           </div>
         </div>
         <div class="form-actions" style="margin-top: 20px;">
@@ -643,7 +726,8 @@
       <form id="register-form" class="auth-form" style="display: none;">
         <div class="form-group">
           <label for="register-username">Username</label>
-          <input type="text" id="register-username" placeholder="Choose a username (min 3 chars)" required autocomplete="username" minlength="3" />
+          <input type="text" id="register-username" placeholder="Choose a username (min 3 chars)" required
+            autocomplete="username" minlength="3" />
         </div>
         <div class="form-group">
           <label for="register-email">Email Address</label>
@@ -652,8 +736,10 @@
         <div class="form-group">
           <label for="register-password">Password</label>
           <div class="password-wrapper">
-            <input type="password" id="register-password" placeholder="Create a password (min 6 chars)" required autocomplete="new-password" minlength="6" />
-            <button type="button" class="toggle-password-btn" data-target="register-password" aria-label="Toggle password visibility">👁️</button>
+            <input type="password" id="register-password" placeholder="Create a password (min 6 chars)" required
+              autocomplete="new-password" minlength="6" />
+            <button type="button" class="toggle-password-btn" data-target="register-password"
+              aria-label="Toggle password visibility">👁️</button>
           </div>
         </div>
         <div class="form-group">
@@ -715,4 +801,5 @@
 
   <script src="/app.js"></script>
 </body>
+
 </html>
