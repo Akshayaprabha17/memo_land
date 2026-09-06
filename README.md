@@ -1,117 +1,191 @@
-# 🔐 Memory Lock
+<div align="center">
 
-A simple, private notebook for the web — where you can save your thoughts, ideas, and secrets, and lock the sensitive ones with a PIN.
+<img src="screenshots/hero.png" alt="Memory Lock - Your Personal Vault" width="800" />
 
----
+### **Your Private Memory Vault**
 
-## ❓ What is this project?
+*A personal notebook where you decide what stays open and what gets locked.*
 
-Memory Lock is a web app that works like a digital diary or notes app. You type in a note (called a "memory"), give it a title and category, and save it. If a note is private, you can lock it with a PIN so nobody else can read it without entering the code.
+<p>
 
-## 🤔 Why was it made?
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](package.json)
+[![Express](https://img.shields.io/badge/express-4.x-000000?logo=express&logoColor=white)](package.json)
+[![SQLite](https://img.shields.io/badge/better--sqlite3-13.x-003B57?logo=sqlite&logoColor=white)](package.json)
 
-Most note apps either have no privacy at all, or lock the *whole app* behind one password. Memory Lock lets you protect **individual notes** while keeping the rest of your notes open — so you don't need a PIN just to check your grocery list, but your secrets stay hidden.
+[Quick Start](#quick-start) · [Features](#key-features) · [Screenshots](#a-closer-look) · [Tech Stack](#tech-stack) · [Contributing](#contributing)
 
-## 👤 Who is it for?
+</p>
+</div>
 
-- Anyone who wants a simple personal notes app
-- People who want to keep some notes private (diary entries, passwords reminders, secrets) without locking the whole app
-- Students/developers who want a small, easy-to-read project to learn how login systems, databases, and note-taking apps work
-- No technical knowledge is needed to *use* the app — only to run/install it
+## What is Memory Lock?
 
-## 📍 Where does it run?
+Memory Lock is a personal vault for notes, ideas, and secrets — the things you'd write in a diary but don't necessarily want visible the second someone glances at your screen. Instead of locking an entire app behind one password, it lets you lock **individual memories** with their own PIN, while everything else stays open and quick to get to.
 
-It runs on your own computer (or any server) as a local website. You open it in a web browser like Chrome or Firefox, just like any other website.
+Write in Markdown, tag things, sort them into categories, attach a picture, dictate a note out loud, or share a single memory with a link that expires on its own. Everything runs on a small Express server with a local SQLite database — no external services, no accounts on someone else's server.
 
-## ⏰ When would you use it?
-
-- Whenever you want to jot down a quick thought, idea, or reminder
-- When you want to keep a private diary or list of secrets
-- When you want to track your daily writing habit (there's a built-in streak tracker)
-
-## 🛠 How does it work?
-
-1. You create an account (or use the demo account).
-2. You add a memory: give it a title, write the content, pick a category (Personal, Work, Ideas, Secrets, Important), and optionally add tags or a picture.
-3. If it's private, click the lock icon and set a PIN.
-4. To read a locked memory later, you enter the PIN.
-5. You can search, filter, sort, pin favorites, and even share a memory with a temporary public link.
+If you have never touched the codebase before, it's small enough to read start to finish in an afternoon.
 
 ---
 
-## ✨ Main Features (in plain words)
+## Quick Start
 
-| Feature | What it does |
-|---|---|
-| 🔑 Accounts | Sign up and log in, so your notes are private to you |
-| 🔒 PIN Lock | Lock any single note with its own PIN |
-| 🗂️ Categories & Tags | Organize notes into groups and label them |
-| ✍️ Markdown Writing | Format text (bold, lists, etc.) as you type |
-| 🖼️ Images | Attach a picture to a note |
-| 🎤 Voice Typing | Speak instead of typing |
-| 🔥 Streaks | See how many days in a row you've added notes |
-| 📊 Stats | See totals, categories, and fun facts about your notes |
-| 🔍 Search & Sort | Quickly find notes, filter by tag/date, sort by newest/oldest/A–Z |
-| 🔗 Share Link | Create a link so someone else can view one note (link expires automatically) |
-| 🌗 Light/Dark Mode | Switch how the app looks |
+### Prerequisites
 
----
+- [Node.js](https://nodejs.org) v22 or newer
+- npm
 
-## 🚀 How to run it
-
-**You'll need:** [Node.js](https://nodejs.org) version 22 or newer installed on your computer.
+### Install and run
 
 ```bash
-# 1. Download the project
 git clone <this-repo-url>
 cd memory-lock
-
-# 2. Install what it needs
 npm install
-
-# 3. Start the app
 npm start
 ```
 
-Then open your browser and go to:
+Open **http://localhost:3000**, create an account (or use the demo login below), and start writing.
 
+> **Just want to poke around first?** Log in with username `demo` / password `demo123` — it's seeded automatically on first run.
+
+<details>
+<summary><b>Development mode (auto-restart on changes)</b></summary>
+
+```bash
+npm run dev
 ```
-http://localhost:3000
-```
 
-**Want to try it without creating an account?** Use the built-in demo login:
-- Username: `demo`
-- Password: `demo123`
+</details>
 
-### Running tests (optional, for developers)
+<details>
+<summary><b>Running the test suite</b></summary>
 
 ```bash
 npm test
 ```
 
+Tests cover registration/login flows and memory CRUD, including ownership checks so one account can never read or edit another account's memories.
+
+</details>
+
 ---
 
-## 📁 What's inside the project (basic overview)
+## Core Capabilities
+
+### Lock any memory with its own PIN
+
+Every memory has an independent lock. Set a PIN on the ones that matter, leave the rest open — no need to unlock the whole vault just to read a grocery list.
+
+<p align="center">
+  <img src="screenshots/pin-lock.png" alt="Locked memory PIN entry" width="60%" />
+</p>
+
+### Write in Markdown, organize as you go
+
+A Write/Preview toggle shows formatted text as you type. Every memory gets a category and optional tags, so things stay searchable as your vault grows.
+
+<p align="center">
+  <img src="screenshots/new-memory.png" alt="Creating a new memory" width="70%" />
+</p>
+
+### Track your own consistency
+
+A GitHub-style activity heatmap and streak counter show how many days in a row you've actually written something — click any day to filter your vault to that date.
+
+<p align="center">
+  <img src="screenshots/streaks.png" alt="Activity streak and category filters" width="90%" />
+</p>
+
+### Share one memory, not your whole account
+
+Generate a read-only link for a single unlocked memory. It expires automatically, so there's no lingering access to clean up later.
+
+<p align="center">
+  <img src="screenshots/memory-detail.png" alt="Memory detail with share option" width="55%" />
+</p>
+
+<p align="center">
+  <img src="screenshots/share-link.png" alt="Public read-only shared memory" width="65%" />
+</p>
+
+---
+
+## Key Features
+
+| Feature | Description |
+| --- | --- |
+| **Accounts** | Multi-user support with session tokens; each account's memories are fully isolated |
+| **Per-Memory PIN Lock** | Lock/unlock individual memories, or temporarily verify a PIN just to view one |
+| **Categories & Tags** | Personal, Work, Ideas, Secrets, Important — plus free-form tags with usage counts |
+| **Markdown Editor** | Live Write/Preview tabs, sanitized rendering (`marked` + `DOMPurify`) |
+| **Image Attachments** | Attach a picture to any memory |
+| **Voice-to-Text** | Dictate a memory using the browser's Web Speech API |
+| **Activity Heatmap** | Daily contribution grid with current/longest streak tracking |
+| **Stats Dashboard** | Totals, category breakdown, top tags, and a few auto-generated fun facts |
+| **Search, Sort & Filter** | Full-text search, filter by tag/date/category, sort newest/oldest/A–Z/most-edited |
+| **Drag & Drop + Pinning** | Manually reorder memories, pin favorites to the top |
+| **Public Share Links** | Time-limited, read-only links for individual unlocked memories |
+| **Light / Dark Theme** | Toggle stored per device |
+| **Rate Limiting** | Login and PIN-verification endpoints are throttled against brute-force attempts |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| **Backend** | Node.js, Express |
+| **Database** | SQLite via `better-sqlite3`, auto-migrated from seed JSON on first run |
+| **Frontend** | Vanilla HTML / CSS / JavaScript — no framework |
+| **Images** | `sharp` for asset processing |
+| **Auth** | PBKDF2 (SHA-512) password/PIN hashing, random session tokens |
+| **Testing** | Jest + Supertest |
+
+---
+
+## Project Structure
 
 ```
-server.js     → the backend, handles logins, saving/loading notes
-db.js         → the database logic (stores everything in a local file)
-public/       → everything you see in the browser (pages, styling, buttons)
-tests/        → automated checks that make sure things work correctly
-data/         → where your notes and accounts are stored
+server.js     → Express app, routes, auth, PIN logic, public share pages
+db.js         → SQLite schema, queries, and JSON → SQLite migration
+public/       → frontend: index.html, style.css, app.js
+tests/        → auth and memory CRUD / ownership (IDOR) tests
+data/         → seed JSON + the local SQLite database
 ```
 
 ---
 
-## 🔒 Is it safe?
+## Security
 
-- Passwords and PINs are never stored as plain text — they're scrambled (hashed) before saving
-- Each user can only see and edit their own notes
-- Locked notes hide their content until the correct PIN is entered
-- Login attempts are limited to stop guessing attacks
+- Passwords and PINs are hashed (PBKDF2, per-record salt) — nothing is stored in plain text
+- Every memory endpoint checks ownership, so one account can never read or modify another account's data
+- Locked memory content is stripped from API responses until a correct PIN is supplied
+- Login and PIN-verification endpoints are rate-limited (10 attempts / 15 minutes per IP)
 
 ---
 
-## 📄 License
+## Contributing
 
-MIT — free to use, copy, and modify.
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes and add/update tests
+4. Run `npm test`
+5. Open a Pull Request
+
+Bug fixes, small feature ideas, and documentation improvements are all welcome.
+
+---
+
+## License
+
+**MIT** — free to use, modify, and self-host. See [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+
+**A small, private place to keep the things worth remembering.**
+
+[Back to Top](#memory-lock)
+
+</div>
