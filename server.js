@@ -89,10 +89,6 @@ function getAuthToken(req) {
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
     return req.headers.authorization.split(' ')[1];
   }
-  if (req.headers.cookie) {
-    const match = req.headers.cookie.split(';').find(c => c.trim().startsWith('session_token='));
-    if (match) return match.split('=')[1].trim();
-  }
   return null;
 }
 

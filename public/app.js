@@ -1974,38 +1974,26 @@
       fetchHeatmap();
     }
 
-    // Check Current Auth Session on load (Per-Tab Isolated)
+    // Check Current Auth Session on load (Strict Password Security: No Auto-Login)
     async function checkAuth() {
-      let token = getActiveToken();
-      if (!token) {
-        // If a brand new tab opens with no token, default to the first saved account if available
-        const accounts = getSavedAccounts();
-        if (accounts.length > 0) {
-          token = accounts[0].token;
-          setActiveToken(token);
-        }
-      }
-
+      const token = getActiveToken();
       if (token) {
         try {
           const res = await customFetch('/api/auth/me');
           const data = await res.json();
           if (data.user) {
             currentUser = data.user;
-            saveAccountSession(data.user, token);
           } else {
             setActiveToken(null);
             currentUser = null;
           }
-          updateAuthUI();
         } catch (e) {
           currentUser = null;
-          updateAuthUI();
         }
       } else {
         currentUser = null;
-        updateAuthUI();
       }
+      updateAuthUI();
     }
 
     checkAuth();
