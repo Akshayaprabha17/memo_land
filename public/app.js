@@ -27,6 +27,65 @@
 
   const PAGE_LIMIT = 12;
 
+  // --- Auth Token & Multi-Account Storage Helpers (Per-Tab Session Isolation) ---
+  function getActiveToken() {
+    return sessionStorage.getItem('memo_land_tab_token') || null;
+  }
+
+  function setActiveToken(token) {
+    if (token) {
+      sessionStorage.setItem('memo_land_tab_token', token);
+    } else {
+      sessionStorage.removeItem('memo_land_tab_token');
+    }
+  }
+
+  function getSavedAccounts() {
+    try {
+      return JSON.parse(localStorage.getItem('memo_land_accounts')) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveAccountSession(user, token) {
+    if (!user || !token) return;
+    let accounts = getSavedAccounts();
+    accounts = accounts.filter(a => a.user.id !== user.id);
+    accounts.unshift({ user, token });
+    localStorage.setItem('memo_land_accounts', JSON.stringify(accounts));
+    setActiveToken(token);
+    currentUser = user;
+  }
+
+  function removeAccountSession(userId) {
+    let accounts = getSavedAccounts();
+    accounts = accounts.filter(a => a.user.id !== userId);
+    localStorage.setItem('memo_land_accounts', JSON.stringify(accounts));
+    if (currentUser && currentUser.id === userId) {
+      setActiveToken(null);
+      currentUser = null;
+    }
+  }
+
+  function switchAccount(token, user) {
+    setActiveToken(token);
+    currentUser = user;
+    updateAuthUI();
+    refreshAllVaultData();
+    showToast(`Switched to @${user.username} 👋`, 'success');
+  }
+
+  async function customFetch(url, options = {}) {
+    const opts = { ...options };
+    opts.headers = opts.headers ? { ...opts.headers } : {};
+    const token = getActiveToken();
+    if (token) {
+      opts.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, opts);
+  }
+
   // --- DOM Elements ---
   const grid = document.getElementById('memory-grid');
   const skeletonGrid = document.getElementById('skeleton-grid');
@@ -208,7 +267,7 @@
     showSkeleton();
 
     try {
-      const res = await fetch(buildUrl(1));
+      const res = await customFetch(buildUrl(1));
       const result = await res.json();
       allMemories = result.data || [];
       hasMore = result.hasMore || false;
@@ -233,7 +292,7 @@
 
     try {
       const nextPage = page + 1;
-      const res = await fetch(buildUrl(nextPage));
+      const res = await customFetch(buildUrl(nextPage));
       const result = await res.json();
       allMemories = [...allMemories, ...(result.data || [])];
       hasMore = result.hasMore || false;
@@ -266,7 +325,7 @@
   // --- Tags API ---
   async function fetchTags() {
     try {
-      const res = await fetch('/api/tags');
+      const res = await customFetch('/api/tags');
       const tags = await res.json();
       renderTagFilterBar(tags);
     } catch (e) { /* silent */ }
@@ -280,7 +339,7 @@
   // --- Heatmap API ---
   async function fetchHeatmap() {
     try {
-      const res = await fetch('/api/heatmap');
+      const res = await customFetch('/api/heatmap');
       const counts = await res.json();
       renderHeatmap(counts);
     } catch (e) { /* silent */ }
@@ -446,7 +505,7 @@
   // --- CRUD ---
   async function createMemory(data) {
     try {
-      const res = await fetch('/api/memories', {
+      const res = await customFetch('/api/memories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -459,7 +518,7 @@
 
   async function updateMemory(id, data) {
     try {
-      const res = await fetch(`/api/memories/${id}`, {
+      const res = await customFetch(`/api/memories/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -493,7 +552,7 @@
     }, async () => {
       // COMMIT: actually delete
       try {
-        const res = await fetch(`/api/memories/${id}`, { method: 'DELETE' });
+        const res = await customFetch(`/api/memories/${id}`, { method: 'DELETE' });
         if (!res.ok) {
           // If server delete fails, silently restore
           const e = await res.json();
@@ -555,7 +614,7 @@
 
   async function togglePin(id) {
     try {
-      const res = await fetch(`/api/memories/${id}/pin`, { method: 'PATCH' });
+      const res = await customFetch(`/api/memories/${id}/pin`, { method: 'PATCH' });
       if (!res.ok) throw new Error('Pin failed');
       const updated = await res.json();
       showToast(updated.pinned ? 'Memory pinned 📌' : 'Unpinned', 'info');
@@ -566,7 +625,7 @@
   async function saveReorder(orderedMemories) {
     const order = orderedMemories.map((m, i) => ({ id: m.id, sortOrder: orderedMemories.length - i }));
     try {
-      await fetch('/api/memories/reorder', {
+      await customFetch('/api/memories/reorder', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order })
@@ -1089,7 +1148,7 @@
       if (!actionTargetMemoryId) return;
       const pin = newPinInput.value;
       try {
-        const res = await fetch(`/api/memories/${actionTargetMemoryId}/lock`, {
+        const res = await customFetch(`/api/memories/${actionTargetMemoryId}/lock`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin })
         });
         if (!res.ok) throw new Error();
@@ -1110,7 +1169,7 @@
         const url = isPermanentUnlock
           ? `/api/memories/${actionTargetMemoryId}/unlock`
           : `/api/memories/${actionTargetMemoryId}/verify`;
-        const res = await fetch(url, {
+        const res = await customFetch(url, {
           method: isPermanentUnlock ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin })
         });
@@ -1214,7 +1273,7 @@
     viewShareBtn.addEventListener('click', async () => {
       if (!currentViewMemory) return;
       try {
-        const res = await fetch(`/api/memories/${currentViewMemory.id}/share`, {
+        const res = await customFetch(`/api/memories/${currentViewMemory.id}/share`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ hours: 24 })
@@ -1486,7 +1545,7 @@
 
     async function loadStats() {
       try {
-        const res = await fetch('/api/stats');
+        const res = await customFetch('/api/stats');
         const s = await res.json();
         renderStats(s);
       } catch (e) {
@@ -1675,6 +1734,47 @@
       if (userDropdown) userDropdown.style.display = 'none';
     }
 
+    const userAddAccBtn = document.getElementById('user-add-acc-btn');
+
+    function renderSavedAccountsMenu() {
+      const container = document.getElementById('user-dropdown-accounts');
+      if (!container) return;
+      const accounts = getSavedAccounts();
+      if (accounts.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = `
+        <div style="font-size:0.7rem; color:var(--text-muted); padding:4px 12px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">Saved Accounts</div>
+        ${accounts.map(acc => {
+          const isActive = currentUser && currentUser.id === acc.user.id;
+          return `
+            <div class="user-account-row ${isActive ? 'active' : ''}" data-token="${acc.token}">
+              <span style="font-size:1.1rem;">${acc.user.avatar || '👤'}</span>
+              <div style="flex:1; overflow:hidden;">
+                <div style="font-weight:600; color:${isActive ? 'var(--accent-violet)' : 'var(--text-primary)'}; font-size:0.82rem;">@${escapeHtml(acc.user.username)}</div>
+                <div style="font-size:0.7rem; color:var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHtml(acc.user.email)}</div>
+              </div>
+              ${isActive ? '<span style="font-size:0.75rem; color:var(--accent-emerald);">✓</span>' : ''}
+            </div>
+          `;
+        }).join('')}
+      `;
+
+      container.querySelectorAll('.user-account-row').forEach(row => {
+        row.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const token = row.dataset.token;
+          const targetAcc = accounts.find(a => a.token === token);
+          if (targetAcc && (!currentUser || currentUser.id !== targetAcc.user.id)) {
+            switchAccount(targetAcc.token, targetAcc.user);
+            if (userDropdown) userDropdown.style.display = 'none';
+          }
+        });
+      });
+    }
+
     function closeAuthModal() {
       if (authModal) authModal.classList.remove('active');
     }
@@ -1692,12 +1792,16 @@
     }
     if (headerLoginBtn) headerLoginBtn.addEventListener('click', () => openAuthModal('login'));
     if (headerRegisterBtn) headerRegisterBtn.addEventListener('click', () => openAuthModal('register'));
+    if (userAddAccBtn) userAddAccBtn.addEventListener('click', () => openAuthModal('login'));
 
     // Dropdown toggle
     if (userBadge) {
       userBadge.addEventListener('click', (e) => {
         e.stopPropagation();
         const isOpen = userDropdown.style.display === 'block';
+        if (!isOpen) {
+          renderSavedAccountsMenu();
+        }
         userDropdown.style.display = isOpen ? 'none' : 'block';
       });
     }
@@ -1736,7 +1840,6 @@
 
     if (profileModalClose) profileModalClose.addEventListener('click', closeProfileModal);
     if (userProfileBtn) userProfileBtn.addEventListener('click', openProfileModal);
-    if (userSwitchBtn) userSwitchBtn.addEventListener('click', () => openAuthModal('login'));
     if (profileSwitchAccBtn) profileSwitchAccBtn.addEventListener('click', () => {
       closeProfileModal();
       openAuthModal('login');
@@ -1752,7 +1855,7 @@
         const avatar = selectedAvatar;
 
         try {
-          const res = await fetch('/api/auth/register', {
+          const res = await customFetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, email, password, avatar })
@@ -1760,7 +1863,7 @@
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Registration failed.');
 
-          currentUser = data.user;
+          saveAccountSession(data.user, data.token);
           updateAuthUI();
           closeAuthModal();
           showToast(`Welcome, @${currentUser.username}! ✨`, 'success');
@@ -1782,7 +1885,7 @@
         if (loginPassword) loginPassword.classList.remove('input-error');
 
         try {
-          const res = await fetch('/api/auth/login', {
+          const res = await customFetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ login, password })
@@ -1796,7 +1899,7 @@
             throw new Error(data.error || 'Incorrect password. Please try again.');
           }
 
-          currentUser = data.user;
+          saveAccountSession(data.user, data.token);
           updateAuthUI();
           closeAuthModal();
 
@@ -1815,8 +1918,10 @@
     // Logout Handler
     async function handleLogout() {
       try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        currentUser = null;
+        await customFetch('/api/auth/logout', { method: 'POST' });
+        if (currentUser) {
+          removeAccountSession(currentUser.id);
+        }
         updateAuthUI();
         closeProfileModal();
         closeAuthModal();
@@ -1834,7 +1939,11 @@
         render();
 
         showToast('Logged out successfully', 'info');
-        exitVaultToLanding();
+        if (!currentUser) {
+          exitVaultToLanding();
+        } else {
+          refreshAllVaultData();
+        }
       } catch (err) {
         showToast('Logout failed', 'error');
       }
@@ -1865,14 +1974,35 @@
       fetchHeatmap();
     }
 
-    // Check Current Auth Session on load
+    // Check Current Auth Session on load (Per-Tab Isolated)
     async function checkAuth() {
-      try {
-        const res = await fetch('/api/auth/me');
-        const data = await res.json();
-        currentUser = data.user;
-        updateAuthUI();
-      } catch (e) {
+      let token = getActiveToken();
+      if (!token) {
+        // If a brand new tab opens with no token, default to the first saved account if available
+        const accounts = getSavedAccounts();
+        if (accounts.length > 0) {
+          token = accounts[0].token;
+          setActiveToken(token);
+        }
+      }
+
+      if (token) {
+        try {
+          const res = await customFetch('/api/auth/me');
+          const data = await res.json();
+          if (data.user) {
+            currentUser = data.user;
+            saveAccountSession(data.user, token);
+          } else {
+            setActiveToken(null);
+            currentUser = null;
+          }
+          updateAuthUI();
+        } catch (e) {
+          currentUser = null;
+          updateAuthUI();
+        }
+      } else {
         currentUser = null;
         updateAuthUI();
       }

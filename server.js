@@ -3,74 +3,42 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_DIR = path.join(__dirname, 'data');
-const DATA_FILE = path.join(DATA_DIR, 'memories.json');
-const SHARES_FILE = path.join(DATA_DIR, 'shares.json');
 
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+// Rate Limiters
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts from this IP, please try again after 15 minutes.' }
+});
+
+const pinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many PIN attempts, please try again after 15 minutes.' }
+});
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Ensure data dir exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+// Cookie options helper
+const getCookieOptions = () => ({
+  httpOnly: true,
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production'
+});
 
 // Helpers
-function readMemories() {
-  try {
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-  } catch (err) {
-    return [];
-  }
-}
-
-function writeMemories(memories) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(memories, null, 2), 'utf-8');
-}
-
-function readShares() {
-  try {
-    return JSON.parse(fs.readFileSync(SHARES_FILE, 'utf-8'));
-  } catch (err) {
-    return [];
-  }
-}
-
-function writeShares(shares) {
-  fs.writeFileSync(SHARES_FILE, JSON.stringify(shares, null, 2), 'utf-8');
-}
-
-function readUsers() {
-  try {
-    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-  } catch (err) {
-    return [];
-  }
-}
-
-function writeUsers(users) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
-}
-
-function readSessions() {
-  try {
-    return JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf-8'));
-  } catch (err) {
-    return [];
-  }
-}
-
-function writeSessions(sessions) {
-  fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
-}
-
 function hashPassword(password, salt) {
   return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
 }
@@ -83,11 +51,10 @@ function sanitizeUser(user) {
   return u;
 }
 
-// Default demo user seeding & legacy memory migration
+// Seed default user
 const DEFAULT_DEMO_USER_ID = 'demo-user-id';
 (function seedDefaultUser() {
-  let users = readUsers();
-  let demoUser = users.find(u => u.id === DEFAULT_DEMO_USER_ID || u.username === 'demo');
+  let demoUser = db.getUserById(DEFAULT_DEMO_USER_ID) || db.getUserByUsernameOrEmail('demo');
   if (!demoUser) {
     const salt = crypto.randomBytes(16).toString('hex');
     demoUser = {
@@ -99,23 +66,24 @@ const DEFAULT_DEMO_USER_ID = 'demo-user-id';
       avatar: '🚀',
       createdAt: new Date().toISOString()
     };
-    users.push(demoUser);
-    writeUsers(users);
-  }
-
-  // Ensure all existing memories belong to default user if unassigned
-  let memories = readMemories();
-  let updated = false;
-  memories.forEach(m => {
-    if (!m.userId) {
-      m.userId = demoUser.id;
-      updated = true;
-    }
-  });
-  if (updated) {
-    writeMemories(memories);
+    db.createUser(demoUser);
   }
 })();
+
+// Periodic Cleanup of Expired Sessions & Shares
+db.pruneExpiredSessions();
+db.pruneShares();
+const cleanupInterval = setInterval(() => {
+  try {
+    db.pruneExpiredSessions();
+    db.pruneShares();
+  } catch (err) {
+    console.error('Periodic cleanup error:', err);
+  }
+}, 60 * 60 * 1000);
+if (cleanupInterval.unref) {
+  cleanupInterval.unref();
+}
 
 function getAuthToken(req) {
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
@@ -130,18 +98,13 @@ function getAuthToken(req) {
 
 function resolveUser(req, res, next) {
   const token = getAuthToken(req);
-  const users = readUsers();
-  const sessions = readSessions();
-  const now = Date.now();
-
   let sessionUser = null;
   if (token) {
-    const session = sessions.find(s => s.token === token && s.expiresAt > now);
+    const session = db.getSession(token);
     if (session) {
-      sessionUser = users.find(u => u.id === session.userId);
+      sessionUser = db.getUserById(session.userId);
     }
   }
-
   req.sessionUser = sessionUser;
   req.currentUser = sessionUser;
   next();
@@ -164,15 +127,17 @@ app.post('/api/auth/register', (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   }
 
-  const users = readUsers();
   const cleanUsername = username.trim().toLowerCase();
   const cleanEmail = email.trim().toLowerCase();
 
-  if (users.some(u => u.username.toLowerCase() === cleanUsername)) {
-    return res.status(400).json({ error: 'Username is already taken.' });
-  }
-  if (users.some(u => u.email.toLowerCase() === cleanEmail)) {
-    return res.status(400).json({ error: 'Email is already registered.' });
+  const existingUser = db.getUserByUsernameOrEmail(cleanUsername) || db.getUserByUsernameOrEmail(cleanEmail);
+  if (existingUser) {
+    if (existingUser.username.toLowerCase() === cleanUsername) {
+      return res.status(400).json({ error: 'Username is already taken.' });
+    }
+    if (existingUser.email.toLowerCase() === cleanEmail) {
+      return res.status(400).json({ error: 'Email is already registered.' });
+    }
   }
 
   const salt = crypto.randomBytes(16).toString('hex');
@@ -186,34 +151,29 @@ app.post('/api/auth/register', (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  users.push(newUser);
-  writeUsers(users);
+  db.createUser(newUser);
 
   // Create session
   const token = crypto.randomBytes(32).toString('hex');
-  const sessions = readSessions();
-  sessions.push({
+  db.createSession({
     token,
     userId: newUser.id,
     createdAt: Date.now(),
     expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
   });
-  writeSessions(sessions);
 
-  res.cookie('session_token', token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.cookie('session_token', token, getCookieOptions());
   res.status(201).json({ user: sanitizeUser(newUser), token });
 });
 
 // POST /api/auth/login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginLimiter, (req, res) => {
   const { login, password } = req.body;
   if (!login || !password) {
     return res.status(400).json({ error: 'Please enter your username/email and password.' });
   }
 
-  const users = readUsers();
-  const cleanLogin = login.trim().toLowerCase();
-  const user = users.find(u => u.username.toLowerCase() === cleanLogin || u.email.toLowerCase() === cleanLogin);
+  const user = db.getUserByUsernameOrEmail(login);
 
   if (!user) {
     return res.status(401).json({ error: 'Incorrect username/email or password. Please try again.' });
@@ -226,16 +186,14 @@ app.post('/api/auth/login', (req, res) => {
 
   // Create session
   const token = crypto.randomBytes(32).toString('hex');
-  const sessions = readSessions();
-  sessions.push({
+  db.createSession({
     token,
     userId: user.id,
     createdAt: Date.now(),
     expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000
   });
-  writeSessions(sessions);
 
-  res.cookie('session_token', token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.cookie('session_token', token, getCookieOptions());
   res.json({ user: sanitizeUser(user), token });
 });
 
@@ -243,9 +201,7 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
   const token = getAuthToken(req);
   if (token) {
-    let sessions = readSessions();
-    sessions = sessions.filter(s => s.token !== token);
-    writeSessions(sessions);
+    db.deleteSession(token);
   }
   res.clearCookie('session_token');
   res.json({ success: true });
@@ -268,6 +224,7 @@ function isPinValid(pin, memory) {
 }
 
 function stripSensitive(memory) {
+  if (!memory) return null;
   const m = { ...memory };
   if (m.locked) {
     m.content = '[LOCKED_CONTENT]';
@@ -279,64 +236,63 @@ function stripSensitive(memory) {
 
 // --- Per-Memory Security Endpoints ---
 
-// Lock a specific memory
+// Lock a specific memory (Requires Ownership)
 app.put('/api/memories/:id/lock', (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.params;
   const { pin } = req.body;
   if (!pin || pin.length < 4) return res.status(400).json({ error: 'PIN must be at least 4 characters.' });
 
-  const memories = readMemories();
-  const index = memories.findIndex(m => m.id === id);
-  if (index === -1) return res.status(404).json({ error: 'Memory not found.' });
-  if (memories[index].locked) return res.status(400).json({ error: 'Memory is already locked.' });
+  const memory = db.getUserMemoryById(id, req.currentUser.id);
+  if (!memory) return res.status(404).json({ error: 'Not found' });
+  if (memory.locked) return res.status(400).json({ error: 'Memory is already locked.' });
 
   const salt = crypto.randomBytes(16).toString('hex');
-  memories[index].salt = salt;
-  memories[index].pinHash = hashPin(pin, salt);
-  memories[index].locked = true;
-  memories[index].updatedAt = new Date().toISOString();
-  
-  writeMemories(memories);
-  res.json(stripSensitive(memories[index]));
+  const updated = db.updateMemory(id, req.currentUser.id, {
+    salt,
+    pinHash: hashPin(pin, salt),
+    locked: true
+  });
+
+  res.json(stripSensitive(updated));
 });
 
-// Permanently unlock a specific memory
-app.put('/api/memories/:id/unlock', (req, res) => {
+// Permanently unlock a specific memory (Requires Ownership & PIN Rate Limit)
+app.put('/api/memories/:id/unlock', pinLimiter, (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.params;
   const { pin } = req.body;
-  
-  const memories = readMemories();
-  const index = memories.findIndex(m => m.id === id);
-  if (index === -1) return res.status(404).json({ error: 'Memory not found.' });
-  if (!memories[index].locked) return res.status(400).json({ error: 'Memory is not locked.' });
 
-  if (!isPinValid(pin, memories[index])) {
+  const memory = db.getUserMemoryById(id, req.currentUser.id);
+  if (!memory) return res.status(404).json({ error: 'Not found' });
+  if (!memory.locked) return res.status(400).json({ error: 'Memory is not locked.' });
+
+  if (!isPinValid(pin, memory)) {
     return res.status(401).json({ error: 'Invalid PIN' });
   }
 
-  memories[index].locked = false;
-  delete memories[index].pinHash;
-  delete memories[index].salt;
-  memories[index].updatedAt = new Date().toISOString();
-  
-  writeMemories(memories);
-  res.json(stripSensitive(memories[index]));
+  const updated = db.updateMemory(id, req.currentUser.id, {
+    locked: false,
+    pinHash: null,
+    salt: null
+  });
+
+  res.json(stripSensitive(updated));
 });
 
-// Temporarily verify a PIN to view a memory (does not change locked state)
-app.post('/api/memories/:id/verify', (req, res) => {
+// Temporarily verify a PIN to view a memory (Requires Ownership & PIN Rate Limit)
+app.post('/api/memories/:id/verify', pinLimiter, (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.params;
   const { pin } = req.body;
-  
-  const memories = readMemories();
-  const memory = memories.find(m => m.id === id);
-  if (!memory) return res.status(404).json({ error: 'Memory not found.' });
-  
+
+  const memory = db.getUserMemoryById(id, req.currentUser.id);
+  if (!memory) return res.status(404).json({ error: 'Not found' });
+
   if (memory.locked && !isPinValid(pin, memory)) {
     return res.status(401).json({ error: 'Invalid PIN' });
   }
-  
-  // Return the FULL memory including content, but strip hash/salt
+
   const m = { ...memory };
   delete m.pinHash;
   delete m.salt;
@@ -350,7 +306,7 @@ app.get('/api/memories', (req, res) => {
   if (!req.currentUser) {
     return res.json({ data: [], total: 0, page: 1, limit: 12, hasMore: false });
   }
-  let memories = readMemories().filter(m => m.userId === req.currentUser.id);
+  let memories = db.getAllMemories(req.currentUser.id);
   const { category, tag, date, sort = 'newest', page = 1, limit = 12 } = req.query;
 
   if (category && category !== 'all') {
@@ -385,7 +341,7 @@ app.get('/api/memories', (req, res) => {
       });
   }
 
-  // Always float pinned memories to the very top, regardless of sort mode
+  // Always float pinned memories to the top
   memories.sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
@@ -415,8 +371,8 @@ app.get('/api/memories/search', (req, res) => {
   const { q, tag, date, sort = 'newest', page = 1, limit = 12 } = req.query;
   if (!q && !date) return res.json({ data: [], total: 0, page: 1, limit: 12, hasMore: false });
 
-  let memories = readMemories().filter(m => m.userId === req.currentUser.id);
-  
+  let memories = db.getAllMemories(req.currentUser.id);
+
   if (q) {
     const query = q.toLowerCase();
     memories = memories.filter(m => {
@@ -443,7 +399,6 @@ app.get('/api/memories/search', (req, res) => {
     default: memories.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
-  // Always float pinned memories to the top
   memories.sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
@@ -468,7 +423,7 @@ app.get('/api/memories/search', (req, res) => {
 // GET all unique tags with usage counts
 app.get('/api/tags', (req, res) => {
   if (!req.currentUser) return res.json([]);
-  const memories = readMemories().filter(m => m.userId === req.currentUser.id);
+  const memories = db.getAllMemories(req.currentUser.id);
   const tagMap = {};
   memories.forEach(m => {
     (m.tags || []).forEach(t => { tagMap[t] = (tagMap[t] || 0) + 1; });
@@ -484,31 +439,26 @@ app.get('/api/stats', (req, res) => {
   if (!req.currentUser) {
     return res.json({ total: 0, thisWeek: 0, locked: 0, avgLength: 0, categories: {}, topTags: [], pinned: 0 });
   }
-  const memories = readMemories().filter(m => m.userId === req.currentUser.id);
+  const memories = db.getAllMemories(req.currentUser.id);
   const total = memories.length;
 
-  // Category breakdown
   const categories = {};
   memories.forEach(m => {
     categories[m.category] = (categories[m.category] || 0) + 1;
   });
 
-  // Locked / pinned
   const locked = memories.filter(m => m.locked).length;
   const pinned = memories.filter(m => m.pinned).length;
 
-  // Average content length (unlocked only, chars)
   const unlocked = memories.filter(m => !m.locked);
   const avgLength = unlocked.length
     ? Math.round(unlocked.reduce((sum, m) => sum + (m.content || '').length, 0) / unlocked.length)
     : 0;
 
-  // This week count
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
   const thisWeek = memories.filter(m => new Date(m.createdAt) >= weekAgo).length;
 
-  // Top 5 tags
   const tagMap = {};
   memories.forEach(m => {
     (m.tags || []).forEach(t => { tagMap[t] = (tagMap[t] || 0) + 1; });
@@ -518,7 +468,6 @@ app.get('/api/stats', (req, res) => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
-  // Most active day (most memories created on a single date)
   const dayCounts = {};
   memories.forEach(m => {
     const d = m.createdAt.split('T')[0];
@@ -528,7 +477,6 @@ app.get('/api/stats', (req, res) => {
     .map(([date, count]) => ({ date, count }))
     .sort((a, b) => b.count - a.count)[0] || null;
 
-  // Longest memory title
   const longestTitle = memories.reduce((best, m) =>
     m.title.length > (best ? best.title.length : 0) ? m : best, null);
 
@@ -545,10 +493,10 @@ app.get('/api/stats', (req, res) => {
   });
 });
 
-// GET heatmap data (counts per day)
+// GET heatmap data
 app.get('/api/heatmap', (req, res) => {
   if (!req.currentUser) return res.json({});
-  const memories = readMemories().filter(m => m.userId === req.currentUser.id);
+  const memories = db.getAllMemories(req.currentUser.id);
   const counts = {};
   memories.forEach(m => {
     const date = m.createdAt.split('T')[0];
@@ -565,11 +513,11 @@ app.post('/api/memories', (req, res) => {
     return res.status(400).json({ error: 'Title and content are required.' });
   }
 
-  const memories = readMemories();
   const cleanTags = Array.isArray(tags)
     ? [...new Set(tags.map(t => t.trim().toLowerCase()).filter(t => t.length > 0))].slice(0, 10)
     : [];
-  const newMemory = {
+
+  const newMemoryData = {
     id: uuidv4(),
     userId: req.currentUser.id,
     title: title.trim(),
@@ -583,59 +531,70 @@ app.post('/api/memories', (req, res) => {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
-  memories.push(newMemory);
-  writeMemories(memories);
-  res.status(201).json(stripSensitive(newMemory));
+
+  const created = db.createMemory(newMemoryData);
+  res.status(201).json(stripSensitive(created));
 });
 
-// PATCH toggle pin on a memory
-app.patch('/api/memories/:id/pin', (req, res) => {
+// DELETE a memory (Requires Ownership — Fixes missing DELETE endpoint & IDOR)
+app.delete('/api/memories/:id', (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.params;
-  const memories = readMemories();
-  const index = memories.findIndex(m => m.id === id);
-  if (index === -1) return res.status(404).json({ error: 'Memory not found.' });
-  memories[index].pinned = !memories[index].pinned;
-  memories[index].updatedAt = new Date().toISOString();
-  writeMemories(memories);
-  res.json(stripSensitive(memories[index]));
+  const deleted = db.deleteMemory(id, req.currentUser.id);
+  if (!deleted) return res.status(404).json({ error: 'Not found' });
+  res.json({ success: true, message: 'Memory deleted successfully.' });
 });
 
-// PUT reorder memories (accepts array of {id, sortOrder})
+// PATCH toggle pin on a memory (Requires Ownership)
+app.patch('/api/memories/:id/pin', (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: 'Unauthorized' });
+  const { id } = req.params;
+
+  const memory = db.getUserMemoryById(id, req.currentUser.id);
+  if (!memory) return res.status(404).json({ error: 'Not found' });
+
+  const updated = db.updateMemory(id, req.currentUser.id, {
+    pinned: !memory.pinned
+  });
+  res.json(stripSensitive(updated));
+});
+
+// PUT reorder memories (Requires Ownership)
 app.put('/api/memories/reorder', (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: 'Unauthorized' });
   const { order } = req.body; // [{id, sortOrder}, ...]
   if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array.' });
-  const memories = readMemories();
-  order.forEach(({ id, sortOrder }) => {
-    const m = memories.find(m => m.id === id);
-    if (m) m.sortOrder = sortOrder;
-  });
-  writeMemories(memories);
+
+  db.reorderMemories(order, req.currentUser.id);
   res.json({ ok: true });
 });
 
-// PUT update a memory (title, content, category, tags)
+// PUT update a memory (Requires Ownership)
 app.put('/api/memories/:id', (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.params;
-  const memories = readMemories();
-  const index = memories.findIndex(m => m.id === id);
-  if (index === -1) return res.status(404).json({ error: 'Memory not found.' });
 
-  if (memories[index].locked) {
+  const memory = db.getUserMemoryById(id, req.currentUser.id);
+  if (!memory) return res.status(404).json({ error: 'Not found' });
+
+  if (memory.locked) {
     return res.status(401).json({ error: 'Vault is locked. Cannot modify locked memory without unlocking first.' });
   }
 
   const { title, content, category, tags, image } = req.body;
-  if (title !== undefined) memories[index].title = title.trim();
-  if (content !== undefined) memories[index].content = content.trim();
-  if (category !== undefined) memories[index].category = category;
-  if (Array.isArray(tags)) {
-    memories[index].tags = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(t => t.length > 0))].slice(0, 10);
-  }
-  if (image !== undefined) memories[index].image = image;
+  const cleanTags = Array.isArray(tags)
+    ? [...new Set(tags.map(t => t.trim().toLowerCase()).filter(t => t.length > 0))].slice(0, 10)
+    : undefined;
 
-  memories[index].updatedAt = new Date().toISOString();
-  writeMemories(memories);
-  res.json(stripSensitive(memories[index]));
+  const updated = db.updateMemory(id, req.currentUser.id, {
+    title: title !== undefined ? title.trim() : undefined,
+    content: content !== undefined ? content.trim() : undefined,
+    category,
+    tags: cleanTags,
+    image
+  });
+
+  res.json(stripSensitive(updated));
 });
 
 // Helper to escape HTML characters
@@ -649,14 +608,14 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
-// POST create a public share token for an unlocked memory
+// POST create a public share token for an unlocked memory (Requires Ownership)
 app.post('/api/memories/:id/share', (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.params;
   const { hours = 24 } = req.body;
 
-  const memories = readMemories();
-  const memory = memories.find(m => m.id === id);
-  if (!memory) return res.status(404).json({ error: 'Memory not found.' });
+  const memory = db.getUserMemoryById(id, req.currentUser.id);
+  if (!memory) return res.status(404).json({ error: 'Not found' });
 
   if (memory.locked) {
     return res.status(400).json({ error: 'Locked memories cannot be publicly shared. Unlock the memory first.' });
@@ -665,9 +624,7 @@ app.post('/api/memories/:id/share', (req, res) => {
   const token = crypto.randomBytes(16).toString('hex');
   const expiresAt = new Date(Date.now() + parseFloat(hours) * 60 * 60 * 1000).toISOString();
 
-  // Read active shares, discard expired ones (garbage collection)
-  const now = new Date().toISOString();
-  const shares = readShares().filter(s => s.expiresAt > now);
+  db.pruneShares();
 
   const newShare = {
     token,
@@ -675,8 +632,7 @@ app.post('/api/memories/:id/share', (req, res) => {
     expiresAt
   };
 
-  shares.push(newShare);
-  writeShares(shares);
+  db.createShare(newShare);
 
   res.json({
     token,
@@ -688,18 +644,10 @@ app.post('/api/memories/:id/share', (req, res) => {
 // GET view a publicly shared memory read-only
 app.get('/share/:token', (req, res) => {
   const { token } = req.params;
-  const now = new Date().toISOString();
-  
-  // Clean expired shares on load
-  const shares = readShares();
-  const activeShares = shares.filter(s => s.expiresAt > now);
-  if (shares.length !== activeShares.length) {
-    writeShares(activeShares);
-  }
+  db.pruneShares();
 
-  const share = activeShares.find(s => s.token === token);
+  const share = db.getActiveShare(token);
   
-  // Shared link expired or invalid layout
   const errorPageHTML = `
     <!DOCTYPE html>
     <html lang="en">
@@ -749,13 +697,11 @@ app.get('/share/:token', (req, res) => {
     return res.status(404).send(errorPageHTML);
   }
 
-  const memories = readMemories();
-  const memory = memories.find(m => m.id === share.memoryId);
+  const memory = db.getMemoryById(share.memoryId);
   if (!memory || memory.locked) {
     return res.status(404).send(errorPageHTML);
   }
 
-  // Calculate remaining hours
   const hoursLeft = Math.max(0.1, (new Date(share.expiresAt) - new Date()) / (1000 * 60 * 60));
   const timeString = hoursLeft > 1 
     ? `${Math.round(hoursLeft)} hours`
@@ -906,7 +852,6 @@ app.get('/share/:token', (req, res) => {
 
       <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
       <script>
-        // Render Markdown client-side in the preview box
         const raw = document.getElementById('raw-content').textContent;
         document.getElementById('content-rendered').innerHTML = marked.parse(raw, { breaks: true });
       </script>
@@ -922,6 +867,10 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`\n  🔐 Memory Lock is running at http://localhost:${PORT}\n`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`\n  🔐 Memory Lock is running at http://localhost:${PORT}\n`);
+  });
+}
+
+module.exports = app;
